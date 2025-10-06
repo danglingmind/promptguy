@@ -2,7 +2,7 @@
 
 import { UserButton, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
-import { Search, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { NotificationCenter } from '@/components/NotificationCenter'
 import Link from 'next/link'
 
@@ -18,17 +18,8 @@ export function Navbar() {
           <span className="font-bold text-xl">PromptGuy</span>
         </Link>
 
-        {/* Search Bar */}
-        <div className="flex-1 max-w-md mx-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search prompts..."
-              className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-        </div>
+        {/* Spacer to balance layout */}
+        <div className="flex-1 mx-8" />
 
         {/* Right Side Actions */}
         <div className="flex items-center space-x-4">

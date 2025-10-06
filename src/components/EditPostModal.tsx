@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { X, Plus } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { CreatePostRequestBody, PostResponse } from '@/types/post'
 
 interface EditPostModalProps {
@@ -102,15 +103,15 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Edit Post</CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-        <CardContent>
+    <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
+      <DialogContent className="p-0">
+        <Card className="w-full max-h-[90vh] overflow-y-auto bg-card text-card-foreground border-0 shadow-none rounded-lg">
+          <CardHeader className="pb-2">
+            <DialogHeader>
+              <DialogTitle>Edit Post</DialogTitle>
+            </DialogHeader>
+          </CardHeader>
+          <CardContent className="pt-0">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Title *</label>
@@ -128,7 +129,7 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 placeholder="Write your prompt here..."
-                className="w-full min-h-[150px] p-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full min-h-[150px] p-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               />
             </div>
@@ -138,7 +139,7 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
               <select
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                className="w-full p-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full p-3 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               >
                 <option value="">Select a model</option>
@@ -153,7 +154,7 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
               <select
                 value={formData.purpose}
                 onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                className="w-full p-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full p-3 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               >
                 <option value="">Select a purpose</option>
@@ -221,8 +222,9 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
               </Button>
             </div>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
