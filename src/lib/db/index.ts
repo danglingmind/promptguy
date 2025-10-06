@@ -1,40 +1,19 @@
 import { PrismaClient } from '@prisma/client'
-import { mockPrisma } from './mockClient'
 
-// Global variable to store the Prisma client instance
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined
 }
 
-// Check if we should use mock database (when DATABASE_URL is not set or invalid)
-const useMockDatabase = !process.env.DATABASE_URL || process.env.DATABASE_URL === '' || process.env.DATABASE_URL.includes('yxivrwwtecancadpfxnh')
+export const prisma: PrismaClient = global.prisma ?? new PrismaClient()
 
-console.log('Database URL:', process.env.DATABASE_URL)
-console.log('Using mock database:', useMockDatabase)
-
-// Create Prisma client instance or use mock
-let prisma: any
-
-if (useMockDatabase) {
-  console.log('Using mock database for development')
-  prisma = mockPrisma
-} else {
-  console.log('Using real database')
-  prisma = globalForPrisma.prisma ?? new PrismaClient()
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma
 }
 
-export { prisma }
-
-// In development, store the client on globalThis to prevent multiple instances
-if (process.env.NODE_ENV !== 'production' && !useMockDatabase) {
-  globalForPrisma.prisma = prisma
-}
-
-// Database type selection
-export const getDatabaseType = () => {
+export const getDatabaseType = (): string => {
   return process.env.DATABASE_TYPE || 'supabase'
 }
 
-// Export database clients based on configuration
 export { supabase, supabaseAdmin } from './supabaseClient'
 export { connectToDatabase, db as mongoDb } from './mongoClient'

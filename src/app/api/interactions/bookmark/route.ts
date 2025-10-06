@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
+import type { ToggleBookmarkRequestBody, ToggleBookmarkResponse } from '@/types/interactions'
+import { ensureUserByClerkId } from '@/lib/auth/ensureUser'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,16 +11,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { postId } = await request.json()
+    const { postId } = (await request.json()) as ToggleBookmarkRequestBody
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await ensureUserByClerkId(userId)
 
     // Check if already bookmarked
     const existingBookmark = await prisma.bookmark.findUnique({
@@ -51,7 +46,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      return NextResponse.json({ bookmarked: false })
+      const res: ToggleBookmarkResponse = { bookmarked: false }
+      return NextResponse.json(res)
     } else {
       // Add bookmark
       await prisma.bookmark.create({
@@ -90,7 +86,8 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      return NextResponse.json({ bookmarked: true })
+      const res: ToggleBookmarkResponse = { bookmarked: true }
+      return NextResponse.json(res)
     }
   } catch (error) {
     console.error('Error toggling bookmark:', error)

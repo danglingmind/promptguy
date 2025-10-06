@@ -1,14 +1,12 @@
 "use client"
 
-import { UserButton, SignInButton, useUser } from '@clerk/nextjs'
+import { UserButton, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Search, Plus } from 'lucide-react'
 import { NotificationCenter } from '@/components/NotificationCenter'
 import Link from 'next/link'
 
 export function Navbar() {
-  const { isSignedIn } = useUser()
-
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -34,25 +32,24 @@ export function Navbar() {
 
         {/* Right Side Actions */}
         <div className="flex items-center space-x-4">
-          {isSignedIn ? (
-            <>
-              <NotificationCenter />
-              <Button variant="ghost" asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/create">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create
-                </Link>
-              </Button>
-              <UserButton afterSignOutUrl="/" />
-            </>
-          ) : (
+          <SignedIn>
+            <NotificationCenter />
+            <Button variant="ghost" asChild>
+              <Link href="/dashboard">Dashboard</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/create">
+                <Plus className="h-4 w-4 mr-2" />
+                Create
+              </Link>
+            </Button>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
+          <SignedOut>
             <SignInButton mode="modal">
               <Button>Sign In</Button>
             </SignInButton>
-          )}
+          </SignedOut>
         </div>
       </div>
     </nav>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
+import type { ToggleFollowRequestBody, ToggleFollowResponse } from '@/types/interactions'
+import { ensureUserByClerkId } from '@/lib/auth/ensureUser'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,16 +11,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { targetUserId } = await request.json()
+    const { targetUserId } = (await request.json()) as ToggleFollowRequestBody
 
-    // Get current user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await ensureUserByClerkId(userId)
 
     // Check if already following
     const existingFollow = await prisma.follow.findUnique({
@@ -41,7 +36,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      return NextResponse.json({ following: false })
+      const res: ToggleFollowResponse = { following: false }
+      return NextResponse.json(res)
     } else {
       // Follow
       await prisma.follow.create({
@@ -62,7 +58,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      return NextResponse.json({ following: true })
+      const res: ToggleFollowResponse = { following: true }
+      return NextResponse.json(res)
     }
   } catch (error) {
     console.error('Error toggling follow:', error)

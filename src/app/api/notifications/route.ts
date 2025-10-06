@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
+import { ensureUserByClerkId } from '@/lib/auth/ensureUser'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,14 +15,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await ensureUserByClerkId(userId)
 
     const where: { userId: string; isRead?: boolean } = { userId: user.id }
     if (unreadOnly) {
@@ -58,14 +52,7 @@ export async function PATCH(request: NextRequest) {
 
     const { notificationIds, markAllAsRead } = await request.json()
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    const user = await ensureUserByClerkId(userId)
 
     if (markAllAsRead) {
       // Mark all notifications as read

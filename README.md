@@ -19,6 +19,7 @@ A modern social platform for sharing and discovering AI prompts. Built with Next
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Authentication**: Clerk
+  - UI uses `<SignedIn>`/`<SignedOut>` wrappers for conditional actions
 - **Database**: Prisma ORM with dual database support (Supabase + MongoDB)
 - **UI Components**: Radix UI primitives
 - **Icons**: Lucide React
@@ -54,6 +55,7 @@ A modern social platform for sharing and discovering AI prompts. Built with Next
    # Clerk Authentication
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
    CLERK_SECRET_KEY=your_clerk_secret_key
+   CLERK_WEBHOOK_SECRET=your_clerk_webhook_secret
    
    # Database (choose one)
    DATABASE_TYPE=supabase
@@ -100,10 +102,12 @@ The application uses Prisma ORM with the following main entities:
 ## API Routes
 
 - `GET/POST /api/posts` - Fetch and create posts
+- `POST /api/posts/[id]/view` - Increment post views
 - `POST /api/interactions/like` - Like/unlike posts
 - `POST /api/interactions/bookmark` - Bookmark/unbookmark posts
 - `POST /api/interactions/follow` - Follow/unfollow users
 - `GET/PATCH /api/notifications` - Manage notifications
+ - `POST /api/webhooks/clerk` - Clerk user webhook (create/update)
 
 ## Project Structure
 

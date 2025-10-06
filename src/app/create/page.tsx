@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from 'react'
+import type { CreatePostRequestBody, PostResponse } from '@/types/post'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,20 +36,47 @@ const purposeOptions = [
 
 export default function CreatePost() {
   const { user } = useUser()
-  const [formData, setFormData] = useState({
+  const router = useRouter()
+  const [formData, setFormData] = useState<CreatePostRequestBody>({
     title: '',
     content: '',
     model: '',
     purpose: '',
-    tags: [] as string[],
+    tags: [],
     isPublic: true
   })
-  const [tagInput, setTagInput] = useState('')
+  const [tagInput, setTagInput] = useState<string>('')
+  const [submitting, setSubmitting] = useState<boolean>(false)
+  const [error, setError] = useState<string>('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // TODO: Implement post creation logic
-    console.log('Creating post:', formData)
+    setError('')
+    if (!formData.title || !formData.content || !formData.model || !formData.purpose) {
+      setError('Please fill all required fields')
+      return
+    }
+    try {
+      setSubmitting(true)
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData satisfies CreatePostRequestBody)
+      })
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(data?.error || 'Failed to create post')
+      }
+      const post = (await res.json()) as PostResponse
+      // Redirect to feeds page after success
+      router.push('/')
+      return post
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong'
+      setError(message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const addTag = () => {
@@ -220,13 +249,16 @@ export default function CreatePost() {
 
               {/* Submit Button */}
               <div className="flex gap-4">
-                <Button type="submit" className="flex-1">
-                  Share Prompt
+                <Button type="submit" className="flex-1" disabled={submitting}>
+                  {submitting ? 'Sharing…' : 'Share Prompt'}
                 </Button>
                 <Button type="button" variant="outline" asChild>
                   <Link href="/">Cancel</Link>
                 </Button>
               </div>
+              {error && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
             </form>
           </CardContent>
         </Card>

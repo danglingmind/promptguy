@@ -1,0 +1,9 @@
+node_modules
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+# environment files (should never be committed)
+.env
+.env.local
+.env.*.local

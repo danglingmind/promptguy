@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
+import type { ToggleLikeRequestBody, ToggleLikeResponse } from '@/types/interactions'
+import { ensureUserByClerkId } from '@/lib/auth/ensureUser'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,16 +11,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { postId } = await request.json()
+    const { postId } = (await request.json()) as ToggleLikeRequestBody
 
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
+    // Get or create local user from Clerk
+    const user = await ensureUserByClerkId(userId)
 
     // Check if already liked
     const existingLike = await prisma.like.findUnique({
@@ -51,7 +47,8 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      return NextResponse.json({ liked: false })
+      const res: ToggleLikeResponse = { liked: false }
+      return NextResponse.json(res)
     } else {
       // Like
       await prisma.like.create({
@@ -90,7 +87,8 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      return NextResponse.json({ liked: true })
+      const res: ToggleLikeResponse = { liked: true }
+      return NextResponse.json(res)
     }
   } catch (error) {
     console.error('Error toggling like:', error)

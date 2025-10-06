@@ -1,21 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
+import type { CreatePostRequestBody, ListPostsQuery, ListPostsResponse, PostResponse } from '@/types/post'
+import { ensureUserByClerkId } from '@/lib/auth/ensureUser'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
-    const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const order = searchParams.get('order') || 'desc'
-    const model = searchParams.get('model')
-    const purpose = searchParams.get('purpose')
-    const search = searchParams.get('search')
+    const sortByParam = (searchParams.get('sortBy') || 'createdAt') as ListPostsQuery['sortBy']
+    const orderParam = (searchParams.get('order') || 'desc') as ListPostsQuery['order']
+    const model = searchParams.get('model') || undefined
+    const purpose = searchParams.get('purpose') || undefined
+    const search = searchParams.get('search') || undefined
+    const userOnly = searchParams.get('userOnly') === 'true'
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {
-      isPublic: true
+    // If userOnly is true, get the current user and filter by their posts
+    let authorId: string | undefined
+    if (userOnly) {
+      const { userId } = await auth()
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      const user = await ensureUserByClerkId(userId)
+      authorId = user.id
+    }
+
+    const where: {
+      isPublic?: boolean
+      authorId?: string
+      model?: string
+      purpose?: string
+      OR?: Array<{ title: { contains: string; mode: 'insensitive' } } | { content: { contains: string; mode: 'insensitive' } } | { tags: { has: string } }>
+    } = {}
+
+    if (userOnly) {
+      where.authorId = authorId
+    } else {
+      where.isPublic = true
     }
 
     if (model) where.model = model
@@ -48,12 +71,36 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { [sortBy]: order },
+      orderBy: { [sortByParam || 'createdAt']: orderParam || 'desc' },
       skip: (page - 1) * limit,
       take: limit
     })
 
-    return NextResponse.json({ posts })
+    const response: ListPostsResponse = {
+      posts: posts.map((p): PostResponse => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        model: p.model,
+        purpose: p.purpose,
+        tags: p.tags,
+        isPublic: p.isPublic,
+        likesCount: p.likesCount,
+        bookmarksCount: p.bookmarksCount,
+        sharesCount: p.sharesCount,
+        viewsCount: p.viewsCount,
+        author: {
+          id: p.author.id,
+          username: p.author.username,
+          firstName: p.author.firstName,
+          lastName: p.author.lastName,
+          imageUrl: p.author.imageUrl
+        },
+        createdAt: p.createdAt.toISOString()
+      }))
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error fetching posts:', error)
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
@@ -67,33 +114,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
+    const body = (await request.json()) as CreatePostRequestBody
     const { title, content, model, purpose, tags, isPublic } = body
 
     // Get or create user
-    let user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    })
-
-    if (!user) {
-      // Create user from Clerk data
-      const clerkUser = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`
-        }
-      }).then(res => res.json())
-
-      user = await prisma.user.create({
-        data: {
-          clerkId: userId,
-          email: clerkUser.email_addresses[0]?.email_address || '',
-          username: clerkUser.username || `user_${userId.slice(-8)}`,
-          firstName: clerkUser.first_name,
-          lastName: clerkUser.last_name,
-          imageUrl: clerkUser.image_url
-        }
-      })
-    }
+    const user = await ensureUserByClerkId(userId)
 
     const post = await prisma.post.create({
       data: {
@@ -118,7 +143,29 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ post })
+    const response: PostResponse = {
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      model: post.model,
+      purpose: post.purpose,
+      tags: post.tags,
+      isPublic: post.isPublic,
+      likesCount: post.likesCount,
+      bookmarksCount: post.bookmarksCount,
+      sharesCount: post.sharesCount,
+      viewsCount: post.viewsCount,
+      author: {
+        id: post.author.id,
+        username: post.author.username,
+        firstName: post.author.firstName,
+        lastName: post.author.lastName,
+        imageUrl: post.author.imageUrl
+      },
+      createdAt: post.createdAt.toISOString()
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error creating post:', error)
     return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })

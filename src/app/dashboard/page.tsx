@@ -1,72 +1,91 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Heart, Bookmark, Share2, Eye, Edit, Trash2, Plus } from 'lucide-react'
 import Link from 'next/link'
+import type { PostResponse } from '@/types/post'
 
-// Mock data for user's posts
-const mockUserPosts = [
-  {
-    id: '1',
-    title: 'Advanced Code Review Prompt',
-    content: 'Act as a senior software engineer. Review the following code for security vulnerabilities...',
-    model: 'GPT-4',
-    purpose: 'Code Review',
-    tags: ['programming', 'security'],
-    likesCount: 142,
-    bookmarksCount: 89,
-    sharesCount: 23,
-    viewsCount: 1205,
-    createdAt: new Date('2024-01-15'),
-    isPublic: true
-  },
-  {
-    id: '2',
-    title: 'Creative Writing Assistant',
-    content: 'You are a creative writing coach. Help me develop compelling characters...',
-    model: 'Claude-3',
-    purpose: 'Creative Writing',
-    tags: ['writing', 'creativity'],
-    likesCount: 98,
-    bookmarksCount: 67,
-    sharesCount: 15,
-    viewsCount: 892,
-    createdAt: new Date('2024-01-14'),
-    isPublic: true
-  }
-]
+interface UserPost extends PostResponse {
+  isPublic: boolean
+}
 
-const mockBookmarks = [
-  {
-    id: '1',
-    post: {
-      id: '3',
-      title: 'Data Analysis Prompt',
-      content: 'Analyze this dataset and provide insights on trends...',
-      author: {
-        name: 'Mike Rodriguez',
-        username: '@mikedata'
-      },
-      model: 'GPT-4',
-      purpose: 'Data Analysis',
-      likesCount: 76,
-      bookmarksCount: 45,
-      createdAt: new Date('2024-01-13')
-    }
-  }
-]
+interface Bookmark {
+  id: string
+  post: PostResponse
+}
+
+interface DashboardStats {
+  totalPosts: number
+  totalLikes: number
+  totalBookmarks: number
+  totalViews: number
+}
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser()
   const [activeTab, setActiveTab] = useState('posts')
-  const [userPosts, setUserPosts] = useState(mockUserPosts)
-  const [bookmarks] = useState(mockBookmarks)
+  const [userPosts, setUserPosts] = useState<UserPost[]>([])
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [stats, setStats] = useState<DashboardStats>({
+    totalPosts: 0,
+    totalLikes: 0,
+    totalBookmarks: 0,
+    totalViews: 0
+  })
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string>('')
 
-  if (!isLoaded) {
+  // Fetch user data
+  useEffect(() => {
+    if (!user) return
+
+    const fetchUserData = async () => {
+      try {
+        setLoading(true)
+        setError('')
+
+        // Fetch user posts
+        const postsResponse = await fetch('/api/posts?userOnly=true')
+        if (!postsResponse.ok) {
+          throw new Error('Failed to fetch user posts')
+        }
+        const postsData = await postsResponse.json()
+        setUserPosts(postsData.posts || [])
+
+        // Fetch bookmarks
+        let bookmarksData: { bookmarks: Bookmark[] } = { bookmarks: [] }
+        const bookmarksResponse = await fetch('/api/user/bookmarks')
+        if (bookmarksResponse.ok) {
+          bookmarksData = await bookmarksResponse.json()
+          setBookmarks(bookmarksData.bookmarks || [])
+        }
+
+        // Calculate stats
+        const totalLikes = postsData.posts?.reduce((sum: number, post: UserPost) => sum + post.likesCount, 0) || 0
+        const totalViews = postsData.posts?.reduce((sum: number, post: UserPost) => sum + post.viewsCount, 0) || 0
+        
+        setStats({
+          totalPosts: postsData.posts?.length || 0,
+          totalLikes,
+          totalBookmarks: bookmarksData.bookmarks?.length || 0,
+          totalViews
+        })
+
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [user])
+
+  if (!isLoaded || loading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
@@ -93,6 +112,18 @@ export default function Dashboard() {
           <Button asChild>
             <Link href="/sign-in">Sign In</Link>
           </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold mb-4">Error loading dashboard</h1>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
       </div>
     )
@@ -131,7 +162,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Posts</p>
-                  <p className="text-2xl font-bold">{userPosts.length}</p>
+                  <p className="text-2xl font-bold">{stats.totalPosts}</p>
                 </div>
               </div>
             </CardContent>
@@ -145,9 +176,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Likes</p>
-                  <p className="text-2xl font-bold">
-                    {userPosts.reduce((sum, post) => sum + post.likesCount, 0)}
-                  </p>
+                  <p className="text-2xl font-bold">{stats.totalLikes}</p>
                 </div>
               </div>
             </CardContent>
@@ -161,7 +190,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Bookmarks</p>
-                  <p className="text-2xl font-bold">{bookmarks.length}</p>
+                  <p className="text-2xl font-bold">{stats.totalBookmarks}</p>
                 </div>
               </div>
             </CardContent>
@@ -175,9 +204,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Views</p>
-                  <p className="text-2xl font-bold">
-                    {userPosts.reduce((sum, post) => sum + post.viewsCount, 0)}
-                  </p>
+                  <p className="text-2xl font-bold">{stats.totalViews}</p>
                 </div>
               </div>
             </CardContent>
@@ -256,7 +283,7 @@ export default function Dashboard() {
                         {post.viewsCount}
                       </div>
                       <span className="ml-auto">
-                        {post.createdAt.toLocaleDateString()}
+                        {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Recently'}
                       </span>
                     </div>
                   </CardContent>
@@ -277,7 +304,10 @@ export default function Dashboard() {
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{bookmark.post.title}</h3>
                         <p className="text-sm text-muted-foreground">
-                          by {bookmark.post.author.name} ({bookmark.post.author.username})
+                          by {bookmark.post.author.firstName && bookmark.post.author.lastName 
+                            ? `${bookmark.post.author.firstName} ${bookmark.post.author.lastName}`
+                            : bookmark.post.author.username
+                          } ({bookmark.post.author.username})
                         </p>
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                           {bookmark.post.content}
@@ -296,7 +326,7 @@ export default function Dashboard() {
                         {bookmark.post.bookmarksCount}
                       </div>
                       <span className="ml-auto">
-                        {bookmark.post.createdAt.toLocaleDateString()}
+                        {bookmark.post.createdAt ? new Date(bookmark.post.createdAt).toLocaleDateString() : 'Recently'}
                       </span>
                     </div>
                   </CardContent>
