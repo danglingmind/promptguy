@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Heart, Bookmark, Share2, Eye, Edit, Trash2, Plus } from 'lucide-react'
 import Link from 'next/link'
 import type { PostResponse } from '@/types/post'
+import { EditPostModal } from '@/components/EditPostModal'
 
 interface UserPost extends PostResponse {
   isPublic: boolean
@@ -38,6 +39,8 @@ export default function Dashboard() {
   })
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
+  const [editingPost, setEditingPost] = useState<UserPost | null>(null)
+  const [showEditModal, setShowEditModal] = useState<boolean>(false)
 
   // Fetch user data
   useEffect(() => {
@@ -129,16 +132,71 @@ export default function Dashboard() {
     )
   }
 
-  const handleDeletePost = (postId: string) => {
-    setUserPosts(userPosts.filter(post => post.id !== postId))
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete post')
+      }
+
+      setUserPosts(userPosts.filter(post => post.id !== postId))
+      setStats(prev => ({
+        ...prev,
+        totalPosts: prev.totalPosts - 1
+      }))
+    } catch (err) {
+      console.error('Error deleting post:', err)
+      alert(err instanceof Error ? err.message : 'Failed to delete post')
+    }
   }
 
-  const handleToggleVisibility = (postId: string) => {
+  const handleEditPost = (post: UserPost) => {
+    setEditingPost(post)
+    setShowEditModal(true)
+  }
+
+  const handleEditSuccess = (updatedPost: PostResponse) => {
     setUserPosts(userPosts.map(post => 
-      post.id === postId 
-        ? { ...post, isPublic: !post.isPublic }
+      post.id === updatedPost.id 
+        ? { ...updatedPost, isPublic: updatedPost.isPublic }
         : post
     ))
+    setShowEditModal(false)
+    setEditingPost(null)
+  }
+
+  const handleToggleVisibility = async (postId: string) => {
+    try {
+      const post = userPosts.find(p => p.id === postId)
+      if (!post) return
+
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: post.title,
+          content: post.content,
+          model: post.model,
+          purpose: post.purpose,
+          tags: post.tags,
+          isPublic: !post.isPublic
+        })
+      })
+
+      if (response.ok) {
+        setUserPosts(userPosts.map(p => 
+          p.id === postId 
+            ? { ...p, isPublic: !p.isPublic }
+            : p
+        ))
+      }
+    } catch (err) {
+      console.error('Error toggling visibility:', err)
+    }
   }
 
   return (
@@ -250,7 +308,11 @@ export default function Dashboard() {
                         >
                           {post.isPublic ? 'Public' : 'Private'}
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEditPost(post)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -367,6 +429,19 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Post Modal */}
+        {editingPost && (
+          <EditPostModal
+            post={editingPost}
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false)
+              setEditingPost(null)
+            }}
+            onSuccess={handleEditSuccess}
+          />
+        )}
       </div>
     </div>
   )
