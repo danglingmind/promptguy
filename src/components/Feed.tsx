@@ -8,6 +8,7 @@ import { SearchAndFilter } from '@/components/SearchAndFilter'
 import type { PostResponse, ListPostsResponse } from '@/types/post'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { FEED_FILTERS, type FeedFilterKey } from '@/lib/filters/feed-filters'
 
 export function Feed() {
   const [posts, setPosts] = useState<PostResponse[]>([])
@@ -295,9 +296,25 @@ export function Feed() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">Latest</Button>
-            <Button variant="outline" size="sm">Popular</Button>
-            <Button variant="outline" size="sm">Trending</Button>
+            {(['latest','popular','trending'] as FeedFilterKey[]).map(key => (
+              <Button
+                key={key}
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const strat = FEED_FILTERS[key]
+                  const next = strat.getQueryParams()
+                  setFilterParams(prev => ({ ...prev, ...next }))
+                  setActiveFilters(prev => [
+                    ...prev.filter(f => f.key !== 'featured' && f.key !== 'sort'),
+                    { key: 'sort', label: strat.label }
+                  ])
+                  await refetchWithFilters()
+                }}
+              >
+                {FEED_FILTERS[key].label}
+              </Button>
+            ))}
           </div>
         </div>
 
