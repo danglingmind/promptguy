@@ -5,6 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Increase contrast between app background and card */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -29,7 +30,7 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.98 0 0);
   --foreground: oklch(0.145 0 0);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -42,9 +43,10 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  /* Slightly lighter card on dark to distinguish */
+  --background: oklch(0.16 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.2 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
@@ -76,10 +78,7 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
-* {
-  border-color: hsl(var(--border));
-}
-
+/* Use shadcn defaults via tokens; avoid forcing borders globally */
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
@@ -124,9 +123,7 @@ body {
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  /* Do not force border styling globally */
   body {
     @apply bg-background text-foreground;
   }

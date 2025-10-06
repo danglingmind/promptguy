@@ -382,34 +382,22 @@ export function Feed() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleLike(post.id)}
-                    >
-                        <Heart className="h-4 w-4 mr-1" />
-                      {post.likesCount}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleBookmark(post.id)}
-                    >
-                        <Bookmark className="h-4 w-4 mr-1" />
-                      {post.bookmarksCount}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleShare(post.id)}
-                    >
-                      <Share2 className="h-4 w-4 mr-1" />
-                      {post.sharesCount}
-                    </Button>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleLike(post.id) }} aria-label="Like">
+                      <Heart className="h-4 w-4" />
+                      <span>{post.likesCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleBookmark(post.id) }} aria-label="Bookmark">
+                      <Bookmark className="h-4 w-4" />
+                      <span>{post.bookmarksCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleShare(post.id) }} aria-label="Share">
+                      <Share2 className="h-4 w-4" />
+                      <span>{post.sharesCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <Eye className="h-4 w-4" />
-                      {post.viewsCount}
+                      <span>{post.viewsCount}</span>
                     </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
