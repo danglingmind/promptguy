@@ -485,9 +485,30 @@ export function Feed() {
                 <Badge className="rounded-full px-2 py-0 h-6" variant="outline">{activePost.purpose}</Badge>
               </div>
             </div>
-            <p className="text-muted-foreground whitespace-pre-wrap">
-              {activePost.content}
-            </p>
+            <div className="relative rounded-md bg-muted/60 border border-border/60 overflow-x-auto">
+              <Copy
+                className="h-4 w-4 absolute top-2 right-2 cursor-pointer text-muted-foreground hover:text-foreground"
+                role="button"
+                aria-label="Copy post"
+                title="Copy post"
+                onClick={async () => {
+                  const text = `${activePost.title}\n\n${activePost.content}`
+                  try {
+                    await navigator.clipboard.writeText(text)
+                  } catch {
+                    const ta = document.createElement('textarea')
+                    ta.value = text
+                    document.body.appendChild(ta)
+                    ta.select()
+                    document.execCommand('copy')
+                    document.body.removeChild(ta)
+                  }
+                }}
+              />
+              <pre className="p-4 pr-8 text-sm leading-6 whitespace-pre-wrap">
+                <code>{activePost.content}</code>
+              </pre>
+            </div>
             <div className="flex flex-wrap gap-2">
               {activePost.tags.map((tag) => (
                 <Badge key={tag} variant="outline" className="text-xs rounded-md">#{tag}</Badge>
@@ -526,26 +547,6 @@ export function Feed() {
               </div>
               {/* Date moved to top-right */}
             </div>
-            {/* Copy icon bottom-right */}
-            <Copy
-              className="h-4 w-4 absolute bottom-4 right-4 cursor-pointer text-muted-foreground hover:text-foreground"
-              role="button"
-              aria-label="Copy post"
-              title="Copy post"
-              onClick={async () => {
-                const text = `${activePost.title}\n\n${activePost.content}`
-                try {
-                  await navigator.clipboard.writeText(text)
-                } catch {
-                  const ta = document.createElement('textarea')
-                  ta.value = text
-                  document.body.appendChild(ta)
-                  ta.select()
-                  document.execCommand('copy')
-                  document.body.removeChild(ta)
-                }
-              }}
-            />
           </div>
         )}
       </DialogContent>
