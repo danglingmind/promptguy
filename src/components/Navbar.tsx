@@ -3,6 +3,7 @@
 import { UserButton, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 import { NotificationCenter } from '@/components/NotificationCenter'
 import Link from 'next/link'
 
@@ -12,9 +13,7 @@ export function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="h-8 w-8 rounded-lg bg-brand-500 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">P</span>
-          </div>
+          <Logo className="h-8 w-8 text-foreground dark:text-accent" />
           <span className="font-bold text-xl">PromptGuy</span>
         </Link>
 

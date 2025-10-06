@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">PromptGuy Logo</title>
+  <desc id="desc">A minimal wizard-like face with round glasses and a stylized lightning fringe forming a chat bubble tail, representing AI prompts.</desc>
+
+  <!-- Background badge (chat bubble) -->
+  <path d="M16 28c0-8.837 7.163-16 16-16h64c8.837 0 16 7.163 16 16v44c0 8.837-7.163 16-16 16H60l-18 18v-18H32c-8.837 0-16-7.163-16-16V28z" fill="currentColor" fill-opacity="0.08"/>
+
+  <!-- Wizard-like fringe as a minimal lightning shape (also forms a subtle P-glyph) -->
+  <path d="M44 28l18-12-8 16 14-6-10 16" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Glasses: two round lenses connected, hinting at curiosity/reading -->
+  <circle cx="48" cy="62" r="14" stroke="currentColor" stroke-width="4"/>
+  <circle cx="80" cy="62" r="14" stroke="currentColor" stroke-width="4"/>
+  <path d="M62 62h4" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Subtle smile to humanize the brand -->
+  <path d="M50 80c4 4 24 4 28 0" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Accent spark (idea/prompt) -->
+  <path d="M94 36l3-5 5-3-5-3-3-5-3 5-5 3 5 3 3 5z" fill="currentColor" fill-opacity="0.9"/>
+
+  <!-- Monogram PG (very light, optional). Uses low opacity so mark stays iconic at small sizes -->
+  <path d="M30 104h16c6 0 10-4 10-10s-4-10-10-10H36v20m40-20h-8v20h8c6 0 10-4 10-10s-4-10-10-10z" stroke="currentColor" stroke-opacity="0.25" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Color guidance: inherits currentColor; set via CSS or inline style. Example brand color: #0ea5e9 -->
+</svg>
+
+

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Heart, Bookmark, Share2, Eye, TrendingUp, Star, Clock, X } from 'lucide-react'
+import { Heart, Bookmark, Share2, Eye, TrendingUp, Star, Clock, X, Copy } from 'lucide-react'
 import { SearchAndFilter } from '@/components/SearchAndFilter'
 import type { PostResponse, ListPostsResponse } from '@/types/post'
 import { Badge } from '@/components/ui/badge'
@@ -114,15 +114,15 @@ export function Feed() {
       
       if (response.ok) {
         const data = await response.json()
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { 
-                ...post, 
+    setPosts(posts.map(post => 
+      post.id === postId 
+        ? { 
+            ...post, 
                 likesCount: data.liked ? post.likesCount + 1 : post.likesCount - 1
-              }
-            : post
-        ))
-      }
+          }
+        : post
+    ))
+  }
     } catch (err) {
       console.error('Error liking post:', err)
     }
@@ -138,15 +138,15 @@ export function Feed() {
       
       if (response.ok) {
         const data = await response.json()
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { 
-                ...post, 
+    setPosts(posts.map(post => 
+      post.id === postId 
+        ? { 
+            ...post, 
                 bookmarksCount: data.bookmarked ? post.bookmarksCount + 1 : post.bookmarksCount - 1
-              }
-            : post
-        ))
-      }
+          }
+        : post
+    ))
+  }
     } catch (err) {
       console.error('Error bookmarking post:', err)
     }
@@ -161,14 +161,14 @@ export function Feed() {
       })
       
       if (response.ok) {
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { 
-                ...post, 
-                sharesCount: post.sharesCount + 1
-              }
-            : post
-        ))
+    setPosts(posts.map(post => 
+      post.id === postId 
+        ? { 
+            ...post, 
+            sharesCount: post.sharesCount + 1
+          }
+        : post
+    ))
       }
     } catch (err) {
       console.error('Error sharing post:', err)
@@ -281,7 +281,7 @@ export function Feed() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold">All Posts</h2>
+          <h2 className="text-2xl font-bold">All Posts</h2>
             <div className="flex gap-2 flex-wrap">
               {activeFilters.map(f => (
                 <Button key={`${f.key}-${f.label}`} variant="outline" size="sm" onClick={async () => {
@@ -339,14 +339,23 @@ export function Feed() {
               }}
             >
               <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-                      <span className="text-primary font-semibold">
-                          {post.author.firstName?.charAt(0) || post.author.username.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                      {post.author.imageUrl ? (
+                        <img
+                          src={post.author.imageUrl}
+                          alt={post.author.username}
+                          className="w-10 h-10 rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                          <span className="text-primary font-semibold">
+                            {post.author.firstName?.charAt(0) || post.author.username.charAt(0)}
+                      </span>
+                    </div>
+                      )}
+                    <div>
                         <h3 className="font-semibold">
                           {post.author.firstName && post.author.lastName 
                             ? `${post.author.firstName} ${post.author.lastName}`
@@ -354,61 +363,61 @@ export function Feed() {
                           }
                         </h3>
                         <p className="text-sm text-muted-foreground">@{post.author.username}</p>
-                      </div>
                     </div>
+                  </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Badge variant="secondary" className="rounded-full px-2 py-0 h-6">{post.model}</Badge>
                     <Badge className="rounded-full px-2 py-0 h-6" variant="outline">{post.purpose}</Badge>
-                    </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <h4 className="text-xl font-semibold mb-3">{post.title}</h4>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <h4 className="text-xl font-semibold mb-3">{post.title}</h4>
                   <p className="text-muted-foreground mb-4 line-clamp-3 whitespace-pre-wrap min-h-[72px]">{post.content}</p>
-                  
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {post.tags.map((tag) => (
+                
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {post.tags.map((tag) => (
                     <Badge key={tag} variant="outline" className="text-xs rounded-md">#{tag}</Badge>
-                    ))}
-                  </div>
+                  ))}
+                </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleLike(post.id)}
-                      >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleLike(post.id)}
+                    >
                         <Heart className="h-4 w-4 mr-1" />
-                        {post.likesCount}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleBookmark(post.id)}
-                      >
+                      {post.likesCount}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleBookmark(post.id)}
+                    >
                         <Bookmark className="h-4 w-4 mr-1" />
-                        {post.bookmarksCount}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleShare(post.id)}
-                      >
-                        <Share2 className="h-4 w-4 mr-1" />
-                        {post.sharesCount}
-                      </Button>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Eye className="h-4 w-4" />
-                        {post.viewsCount}
-                      </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {post.createdAt ? new Date(post.createdAt).toISOString().split('T')[0] : 'Recently'}
+                      {post.bookmarksCount}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleShare(post.id)}
+                    >
+                      <Share2 className="h-4 w-4 mr-1" />
+                      {post.sharesCount}
+                    </Button>
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Eye className="h-4 w-4" />
+                      {post.viewsCount}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="text-sm text-muted-foreground">
+                      {post.createdAt ? new Date(post.createdAt).toISOString().split('T')[0] : 'Recently'}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             ))
           )}
           {hasMore && (
@@ -438,17 +447,30 @@ export function Feed() {
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setOpen(false); setActivePost(null) } }}>
       <DialogContent className="sm:max-w-2xl">
         {activePost && (
-          <div className="space-y-4">
+          <div className="space-y-4 relative">
             <DialogHeader>
               <DialogTitle className="text-2xl">{activePost.title}</DialogTitle>
             </DialogHeader>
+            {/* Date at top-right under the close icon */}
+            <div className="absolute top-4 right-2 text-xs text-muted-foreground">
+              {activePost.createdAt ? new Date(activePost.createdAt).toISOString().split('T')[0] : 'Recently'}
+            </div>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-                  <span className="text-primary font-semibold">
-                    {activePost.author.firstName?.charAt(0) || activePost.author.username.charAt(0)}
-                  </span>
-                </div>
+                {activePost.author.imageUrl ? (
+                  <img
+                    src={activePost.author.imageUrl}
+                    alt={activePost.author.username}
+                    className="w-10 h-10 rounded-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                    <span className="text-primary font-semibold">
+                      {activePost.author.firstName?.charAt(0) || activePost.author.username.charAt(0)}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <h3 className="font-semibold">
                     {activePost.author.firstName && activePost.author.lastName
@@ -471,7 +493,7 @@ export function Feed() {
                 <Badge key={tag} variant="outline" className="text-xs rounded-md">#{tag}</Badge>
               ))}
             </div>
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 pr-8">
               <div className="flex items-center gap-6">
                 <Button
                   variant="ghost"
@@ -502,10 +524,28 @@ export function Feed() {
                   {activePost.viewsCount}
                 </div>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {activePost.createdAt ? new Date(activePost.createdAt).toISOString().split('T')[0] : 'Recently'}
-              </div>
+              {/* Date moved to top-right */}
             </div>
+            {/* Copy icon bottom-right */}
+            <Copy
+              className="h-4 w-4 absolute bottom-4 right-4 cursor-pointer text-muted-foreground hover:text-foreground"
+              role="button"
+              aria-label="Copy post"
+              title="Copy post"
+              onClick={async () => {
+                const text = `${activePost.title}\n\n${activePost.content}`
+                try {
+                  await navigator.clipboard.writeText(text)
+                } catch {
+                  const ta = document.createElement('textarea')
+                  ta.value = text
+                  document.body.appendChild(ta)
+                  ta.select()
+                  document.execCommand('copy')
+                  document.body.removeChild(ta)
+                }
+              }}
+            />
           </div>
         )}
       </DialogContent>
