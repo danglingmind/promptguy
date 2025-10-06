@@ -2,24 +2,37 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
 import type { ViewPostResponse } from '@/types/interactions'
+import { ensureUserByClerkId } from '@/lib/auth/ensureUser'
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // optional user context for future personalization
-    await auth()
-
+    const { userId } = await auth()
     const { id: postId } = await params
 
-    const post = await prisma.post.update({
-      where: { id: postId },
-      data: { viewsCount: { increment: 1 } },
-      select: { viewsCount: true }
-    })
+    let viewerId: string | undefined
+    if (userId) {
+      const user = await ensureUserByClerkId(userId)
+      viewerId = user.id
+    }
 
-    const res: ViewPostResponse = { viewsCount: post.viewsCount }
+    await prisma.$transaction([
+      prisma.post.update({
+        where: { id: postId },
+        data: { viewsCount: { increment: 1 } },
+      }),
+      prisma.view.create({
+        data: {
+          postId,
+          userId: viewerId,
+        }
+      })
+    ])
+
+    const updated = await prisma.post.findUnique({ where: { id: postId }, select: { viewsCount: true } })
+    const res: ViewPostResponse = { viewsCount: updated?.viewsCount ?? 0 }
     return NextResponse.json(res)
   } catch (error) {
     console.error('Error incrementing view:', error)

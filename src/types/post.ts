@@ -44,5 +44,6 @@ export interface ListPostsQuery {
 
 export interface ListPostsResponse {
   posts: PostResponse[]
+  hasMore?: boolean
 }
 

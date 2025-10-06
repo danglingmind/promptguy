@@ -51,7 +51,14 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const posts = await prisma.post.findMany({
+    // Compute ETag from latest update timestamp and total count for cheap change detection
+    const [meta, posts] = await Promise.all([
+      prisma.post.aggregate({
+        where,
+        _max: { updatedAt: true },
+        _count: { _all: true }
+      }),
+      prisma.post.findMany({
       where,
       include: {
         author: {
@@ -74,7 +81,17 @@ export async function GET(request: NextRequest) {
       orderBy: { [sortByParam || 'createdAt']: orderParam || 'desc' },
       skip: (page - 1) * limit,
       take: limit
-    })
+      })
+    ])
+
+    const latest = meta._max.updatedAt?.toISOString() || '0'
+    const total = String(meta._count._all || 0)
+    const etag = `W/"${latest}:${total}:${page}:${limit}:${sortByParam}:${orderParam}:${model ?? ''}:${purpose ?? ''}:${search ?? ''}"`
+
+    const ifNoneMatch = request.headers.get('if-none-match')
+    if (ifNoneMatch && ifNoneMatch === etag) {
+      return new NextResponse(null, { status: 304, headers: { ETag: etag } })
+    }
 
     const response: ListPostsResponse = {
       posts: posts.map((p): PostResponse => ({
@@ -97,10 +114,16 @@ export async function GET(request: NextRequest) {
           imageUrl: p.author.imageUrl
         },
         createdAt: p.createdAt.toISOString()
-      }))
+      })),
+      hasMore: posts.length === limit
     }
 
-    return NextResponse.json(response)
+    return NextResponse.json(response, {
+      headers: {
+        ETag: etag,
+        'Cache-Control': 'no-store, must-revalidate'
+      }
+    })
   } catch (error) {
     console.error('Error fetching posts:', error)
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })

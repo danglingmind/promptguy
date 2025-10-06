@@ -105,7 +105,7 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
   return (
     <Dialog open={isOpen} onOpenChange={(open: boolean) => !open && onClose()}>
       <DialogContent className="p-0">
-        <Card className="w-full max-h-[90vh] overflow-y-auto bg-card text-card-foreground border-0 shadow-none rounded-lg">
+        <Card className="w-full max-h-[90vh] overflow-y-auto bg-card text-card-foreground rounded-lg">
           <CardHeader className="pb-2">
             <DialogHeader>
               <DialogTitle>Edit Post</DialogTitle>
@@ -129,7 +129,7 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 placeholder="Write your prompt here..."
-                className="w-full min-h-[150px] p-3 border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full min-h-[150px] p-3 rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               />
             </div>
@@ -139,7 +139,7 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
               <select
                 value={formData.model}
                 onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                className="w-full p-3 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full p-3 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               >
                 <option value="">Select a model</option>
@@ -154,7 +154,7 @@ export function EditPostModal({ post, isOpen, onClose, onSuccess }: EditPostModa
               <select
                 value={formData.purpose}
                 onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                className="w-full p-3 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full p-3 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 required
               >
                 <option value="">Select a purpose</option>
