@@ -81,49 +81,53 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
   const hasActiveFilters = search || selectedModel || selectedPurpose || sortBy !== 'createdAt' || order !== 'desc'
 
   return (
-    <Card className="mb-6">
-      <CardContent className="p-4">
-        <div className="space-y-4">
+    <Card className="mb-4 md:mb-6">
+      <CardContent className="p-3 md:p-4">
+        <div className="space-y-3 md:space-y-4">
           {/* Search Bar */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search prompts..."
-                className="pl-10"
+                className="pl-10 text-sm md:text-base"
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
               />
             </div>
-            <Button onClick={handleSearch}>
-              Search
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-              {hasActiveFilters && (
-                <span className="ml-2 h-2 w-2 rounded-full bg-blue-500" />
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleSearch} className="flex-1 sm:flex-none text-sm">
+                Search
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex-1 sm:flex-none text-sm"
+              >
+                <Filter className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Filters</span>
+                <span className="sm:hidden">Filter</span>
+                {hasActiveFilters && (
+                  <span className="ml-1 md:ml-2 h-2 w-2 rounded-full bg-blue-500" />
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Advanced Filters */}
           {showFilters && (
-            <div className="space-y-4 pt-4 border-t">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-4 pt-3 md:pt-4 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {/* Model Filter */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-xs md:text-sm font-medium mb-1 md:mb-2">
                     AI Model
                   </label>
                   <select
                     value={selectedModel}
                     onChange={(e) => setSelectedModel(e.target.value)}
-                    className="w-full p-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full p-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">All Models</option>
                     {modelOptions.map((model) => (
@@ -134,13 +138,13 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
 
                 {/* Purpose Filter */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-xs md:text-sm font-medium mb-1 md:mb-2">
                     Purpose
                   </label>
                   <select
                     value={selectedPurpose}
                     onChange={(e) => setSelectedPurpose(e.target.value)}
-                    className="w-full p-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full p-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">All Purposes</option>
                     {purposeOptions.map((purpose) => (
@@ -150,15 +154,15 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
                 </div>
 
                 {/* Sort Options */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <label className="block text-xs md:text-sm font-medium mb-1 md:mb-2">
                     Sort By
                   </label>
                   <div className="flex gap-2">
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="flex-1 p-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="flex-1 p-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       {sortOptions.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -170,6 +174,7 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => setOrder(order === 'desc' ? 'asc' : 'desc')}
+                      className="px-3"
                     >
                       {order === 'desc' ? '↓' : '↑'}
                     </Button>
@@ -178,13 +183,13 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
-                <Button onClick={handleSearch}>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleSearch} className="flex-1 sm:flex-none text-sm">
                   Apply Filters
                 </Button>
                 {hasActiveFilters && (
-                  <Button variant="outline" onClick={clearFilters}>
-                    <X className="h-4 w-4 mr-2" />
+                  <Button variant="outline" onClick={clearFilters} className="flex-1 sm:flex-none text-sm">
+                    <X className="h-4 w-4 mr-1 md:mr-2" />
                     Clear All
                   </Button>
                 )}

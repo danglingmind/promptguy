@@ -200,69 +200,69 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Welcome back, {user.firstName || user.username}!
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Plus className="h-4 w-4 text-blue-600" />
+                <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg">
+                  <Plus className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Posts</p>
-                  <p className="text-2xl font-bold">{stats.totalPosts}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Posts</p>
+                  <p className="text-lg md:text-2xl font-bold">{stats.totalPosts}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Heart className="h-4 w-4 text-green-600" />
+                <div className="p-1.5 md:p-2 bg-green-100 rounded-lg">
+                  <Heart className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Likes</p>
-                  <p className="text-2xl font-bold">{stats.totalLikes}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Likes</p>
+                  <p className="text-lg md:text-2xl font-bold">{stats.totalLikes}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Bookmark className="h-4 w-4 text-yellow-600" />
+                <div className="p-1.5 md:p-2 bg-yellow-100 rounded-lg">
+                  <Bookmark className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Bookmarks</p>
-                  <p className="text-2xl font-bold">{stats.totalBookmarks}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Bookmarks</p>
+                  <p className="text-lg md:text-2xl font-bold">{stats.totalBookmarks}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 md:p-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Eye className="h-4 w-4 text-purple-600" />
+                <div className="p-1.5 md:p-2 bg-purple-100 rounded-lg">
+                  <Eye className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Views</p>
-                  <p className="text-2xl font-bold">{stats.totalViews}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Total Views</p>
+                  <p className="text-lg md:text-2xl font-bold">{stats.totalViews}</p>
                 </div>
               </div>
             </CardContent>

@@ -113,27 +113,27 @@ export default function CreatePost() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-6 md:py-8">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="sm" asChild>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 mb-6 md:mb-8">
+          <Button variant="ghost" size="sm" asChild className="self-start">
             <Link href="/">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Feed
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold">Create New Prompt</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Create New Prompt</h1>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Share Your Prompt</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg md:text-xl">Share Your Prompt</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
               {/* Title */}
               <div>
-                <label htmlFor="title" className="block text-sm font-medium mb-2">
+                <label htmlFor="title" className="block text-xs md:text-sm font-medium mb-1 md:mb-2">
                   Title *
                 </label>
                 <Input
@@ -141,13 +141,14 @@ export default function CreatePost() {
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Give your prompt a descriptive title"
+                  className="text-sm md:text-base"
                   required
                 />
               </div>
 
               {/* Content */}
               <div>
-                <label htmlFor="content" className="block text-sm font-medium mb-2">
+                <label htmlFor="content" className="block text-xs md:text-sm font-medium mb-1 md:mb-2">
                   Prompt Content *
                 </label>
                 <textarea
@@ -155,21 +156,21 @@ export default function CreatePost() {
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   placeholder="Write your prompt here. Be specific and clear about what you want the AI to do..."
-                  className="w-full min-h-[200px] p-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full min-h-[150px] md:min-h-[200px] p-3 text-sm md:text-base border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   required
                 />
               </div>
 
               {/* Model Selection */}
               <div>
-                <label htmlFor="model" className="block text-sm font-medium mb-2">
+                <label htmlFor="model" className="block text-xs md:text-sm font-medium mb-1 md:mb-2">
                   AI Model *
                 </label>
                 <select
                   id="model"
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  className="w-full p-3 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full p-2 md:p-3 text-sm md:text-base border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   required
                 >
                   <option value="">Select a model</option>

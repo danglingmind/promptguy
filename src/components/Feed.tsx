@@ -9,8 +9,24 @@ import type { PostResponse, ListPostsResponse } from '@/types/post'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FEED_FILTERS, type FeedFilterKey } from '@/lib/filters/feed-filters'
+import { SignedIn, SignedOut } from '@clerk/nextjs'
+import { LandingPage } from '@/components/LandingPage'
+import Image from 'next/image'
 
 export function Feed() {
+  return (
+    <>
+      <SignedOut>
+        <LandingPage />
+      </SignedOut>
+      <SignedIn>
+        <AuthenticatedFeed />
+      </SignedIn>
+    </>
+  )
+}
+
+function AuthenticatedFeed() {
   const [posts, setPosts] = useState<PostResponse[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [page, setPage] = useState<number>(1)
@@ -251,19 +267,19 @@ export function Feed() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 md:px-0">
       {/* Search and Filter */}
       <SearchAndFilter onSearch={handleSearch} />
       
       {/* Featured Sections */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-6">Discover Prompts</h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">Discover Prompts</h2>
+        <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {featuredSections.map((section, index) => (
             <Card key={index} className="bg-card/60 hover:bg-card shadow-sm hover:shadow-md transition-colors cursor-pointer" onClick={section.apply}>
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <section.icon className="h-5 w-5 text-primary" />
+              <CardHeader className="pb-3 md:pb-4">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                  <section.icon className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                   <span className="text-foreground">{section.title}</span>
                 </CardTitle>
               </CardHeader>
@@ -273,29 +289,30 @@ export function Feed() {
       </div>
 
       {/* Main Feed */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">All Posts</h2>
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-bold">All Posts</h2>
             <div className="flex gap-2 flex-wrap">
               {activeFilters.map(f => (
-                <Button key={`${f.key}-${f.label}`} variant="outline" size="sm" onClick={async () => {
+                <Button key={`${f.key}-${f.label}`} variant="outline" size="sm" className="text-xs" onClick={async () => {
                   setActiveFilters(prev => prev.filter(x => x.key !== f.key))
                   setFilterParams(prev => ({ ...prev, ...(f.key === 'featured' ? { sortBy: undefined, order: undefined, purpose: undefined } : { [f.key]: undefined as unknown as string }) }))
                   await refetchWithFilters()
                 }}>
                   {f.label}
-                  <X className="h-3 w-3 ml-2" />
+                  <X className="h-3 w-3 ml-1" />
                 </Button>
               ))}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {(['latest','popular','trending'] as FeedFilterKey[]).map(key => (
               <Button
                 key={key}
                 variant="outline"
                 size="sm"
+                className="text-xs"
                 onClick={async () => {
                   const strat = FEED_FILTERS[key]
                   const next = strat.getQueryParams()
@@ -315,8 +332,8 @@ export function Feed() {
 
         <div className="space-y-4">
           {posts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No posts found. Be the first to share a prompt!</p>
+            <div className="text-center py-8 md:py-12">
+              <p className="text-muted-foreground text-sm md:text-base">No posts found. Be the first to share a prompt!</p>
             </div>
           ) : (
             posts.map((post) => (
@@ -328,74 +345,75 @@ export function Feed() {
                 setOpen(true)
                 try {
                   await fetch(`/api/posts/${post.id}/view`, { method: 'POST' })
-                } catch (e) {
+                } catch {
                   // no-op
                 }
               }}
             >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
+              <CardHeader className="pb-3 md:pb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                       {post.author.imageUrl ? (
-                        <img
+                        <Image
                           src={post.author.imageUrl}
                           alt={post.author.username}
-                          className="w-10 h-10 rounded-full object-cover"
-                          referrerPolicy="no-referrer"
+                          width={40}
+                          height={40}
+                          className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
-                          <span className="text-primary font-semibold">
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+                          <span className="text-primary font-semibold text-sm md:text-base">
                             {post.author.firstName?.charAt(0) || post.author.username.charAt(0)}
-                      </span>
-                    </div>
+                          </span>
+                        </div>
                       )}
-                    <div>
-                        <h3 className="font-semibold">
+                    <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm md:text-base truncate">
                           {post.author.firstName && post.author.lastName 
                             ? `${post.author.firstName} ${post.author.lastName}`
                             : post.author.username
                           }
                         </h3>
-                        <p className="text-sm text-muted-foreground">@{post.author.username}</p>
+                        <p className="text-xs md:text-sm text-muted-foreground truncate">@{post.author.username}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Badge variant="secondary" className="rounded-full px-2 py-0 h-6">{post.model}</Badge>
-                    <Badge className="rounded-full px-2 py-0 h-6" variant="outline">{post.purpose}</Badge>
+                  <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground flex-shrink-0">
+                    <Badge variant="secondary" className="rounded-full px-1 md:px-2 py-0 h-5 md:h-6 text-xs">{post.model}</Badge>
+                    <Badge className="rounded-full px-1 md:px-2 py-0 h-5 md:h-6 text-xs" variant="outline">{post.purpose}</Badge>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <h4 className="text-xl font-semibold mb-3">{post.title}</h4>
-                  <p className="text-muted-foreground mb-4 line-clamp-3 whitespace-pre-wrap min-h-[72px]">{post.content}</p>
+              <CardContent className="pt-0">
+                <h4 className="text-lg md:text-xl font-semibold mb-2 md:mb-3 leading-tight">{post.title}</h4>
+                  <p className="text-muted-foreground mb-3 md:mb-4 line-clamp-3 whitespace-pre-wrap text-sm md:text-base leading-relaxed">{post.content}</p>
                 
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-1 md:gap-2 mb-3 md:mb-4">
                   {post.tags.map((tag) => (
                     <Badge key={tag} variant="outline" className="text-xs rounded-md">#{tag}</Badge>
                   ))}
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4 md:gap-6 text-xs md:text-sm text-muted-foreground">
                     <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleLike(post.id) }} aria-label="Like">
-                      <Heart className="h-4 w-4" />
+                      <Heart className="h-3 w-3 md:h-4 md:w-4" />
                       <span>{post.likesCount}</span>
                     </div>
                     <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleBookmark(post.id) }} aria-label="Bookmark">
-                      <Bookmark className="h-4 w-4" />
+                      <Bookmark className="h-3 w-3 md:h-4 md:w-4" />
                       <span>{post.bookmarksCount}</span>
                     </div>
                     <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleShare(post.id) }} aria-label="Share">
-                      <Share2 className="h-4 w-4" />
+                      <Share2 className="h-3 w-3 md:h-4 md:w-4" />
                       <span>{post.sharesCount}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3 w-3 md:h-4 md:w-4" />
                       <span>{post.viewsCount}</span>
                     </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs md:text-sm text-muted-foreground flex-shrink-0">
                       {post.createdAt ? new Date(post.createdAt).toISOString().split('T')[0] : 'Recently'}
                   </div>
                 </div>
@@ -441,11 +459,12 @@ export function Feed() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 {activePost.author.imageUrl ? (
-                  <img
+                  <Image
                     src={activePost.author.imageUrl}
                     alt={activePost.author.username}
+                    width={40}
+                    height={40}
                     className="w-10 h-10 rounded-full object-cover"
-                    referrerPolicy="no-referrer"
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
