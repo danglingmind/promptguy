@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Compute ETag from latest update timestamp and total count for cheap change detection
-    const [meta, posts] = await Promise.all([
+    const [{ userId: clerkUserId }, meta, posts] = await Promise.all([
+      auth(),
       prisma.post.aggregate({
         where,
         _max: { updatedAt: true },
@@ -70,13 +71,8 @@ export async function GET(request: NextRequest) {
             imageUrl: true
           }
         },
-        _count: {
-          select: {
-            likes: true,
-            bookmarks: true,
-            shares: true
-          }
-        }
+        likes: { select: { userId: true } },
+        bookmarks: { select: { userId: true } }
       },
       orderBy: { [sortByParam || 'createdAt']: orderParam || 'desc' },
       skip: (page - 1) * limit,
@@ -94,7 +90,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response: ListPostsResponse = {
-      posts: posts.map((p): PostResponse => ({
+      posts: posts.map((p: any): PostResponse => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
         id: p.id,
         title: p.title,
         content: p.content,
@@ -113,7 +109,13 @@ export async function GET(request: NextRequest) {
           lastName: p.author.lastName,
           imageUrl: p.author.imageUrl
         },
-        createdAt: p.createdAt.toISOString()
+        createdAt: p.createdAt.toISOString(),
+        isLikedByCurrentUser: Boolean(
+          clerkUserId && p.likes.some((l: { userId: string }) => l.userId === (authorId as string | undefined ?? ''))
+        ),
+        isBookmarkedByCurrentUser: Boolean(
+          clerkUserId && p.bookmarks.some((b: { userId: string }) => b.userId === (authorId as string | undefined ?? ''))
+        )
       })),
       hasMore: posts.length === limit
     }

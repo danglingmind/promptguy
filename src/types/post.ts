@@ -30,6 +30,8 @@ export interface PostResponse {
   author: PostAuthorSummary
   createdAt: string
   updatedAt?: string
+  isLikedByCurrentUser?: boolean
+  isBookmarkedByCurrentUser?: boolean
 }
 
 export interface ListPostsQuery {

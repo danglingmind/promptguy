@@ -43,36 +43,31 @@ export function Feed() {
     }
   }, [filterParams])
 
+  const fetchPostsOnce = useCallback(async (signal?: AbortSignal, mode: 'append' | 'replace' = 'replace') => {
+    const headers: Record<string, string> = {}
+    const params = new URLSearchParams()
+    params.set('page', String(mode === 'append' ? page + 1 : 1))
+    if (filterParams.sortBy) params.set('sortBy', filterParams.sortBy)
+    if (filterParams.order) params.set('order', filterParams.order)
+    if (filterParams.purpose) params.set('purpose', filterParams.purpose as string)
+    if (filterParams.search) params.set('search', filterParams.search as string)
+    const res = await fetch(`/api/posts?${params.toString()}`, { headers, signal })
+    if (res.status === 304) return // no changes
+    if (!res.ok) throw new Error('Failed to fetch posts')
+    const data = (await res.json()) as ListPostsResponse
+    setHasMore(Boolean(data.hasMore))
+    if (mode === 'append') {
+      setPosts(prev => [...prev, ...data.posts])
+      setPage(prev => prev + 1)
+    } else {
+      setPosts(data.posts)
+      setPage(1)
+    }
+  }, [page, filterParams])
+
   // Fetch posts from API with HTTP caching (ETag) and gentle polling
   useEffect(() => {
     let aborted = false
-    let etag: string | null = null
-
-    async function fetchPostsOnce(signal?: AbortSignal, mode: 'append' | 'replace' = 'replace') {
-      const headers: Record<string, string> = {}
-      if (etag && mode === 'replace') headers['If-None-Match'] = etag
-      const params = new URLSearchParams()
-      params.set('page', String(mode === 'append' ? page + 1 : 1))
-      if (filterParams.sortBy) params.set('sortBy', filterParams.sortBy)
-      if (filterParams.order) params.set('order', filterParams.order)
-      if (filterParams.purpose) params.set('purpose', filterParams.purpose as string)
-      if (filterParams.search) params.set('search', filterParams.search as string)
-      const res = await fetch(`/api/posts?${params.toString()}`, { headers, signal })
-      if (res.status === 304) return // no changes
-      if (!res.ok) throw new Error('Failed to fetch posts')
-      etag = res.headers.get('ETag')
-      const data = (await res.json()) as ListPostsResponse
-      if (!aborted) {
-        setHasMore(Boolean(data.hasMore))
-        if (mode === 'append') {
-          setPosts(prev => [...prev, ...data.posts])
-          setPage(prev => prev + 1)
-        } else {
-          setPosts(data.posts)
-          setPage(1)
-        }
-      }
-    }
 
     async function loop() {
       try {
@@ -102,7 +97,7 @@ export function Feed() {
     const controller = new AbortController()
     loop()
     return () => { aborted = true; controller.abort() }
-  }, [])
+  }, [fetchPostsOnce])
 
   const handleLike = async (postId: string) => {
     try {
@@ -478,7 +473,6 @@ export function Feed() {
                 className="h-4 w-4 absolute top-2 right-2 cursor-pointer text-muted-foreground hover:text-foreground"
                 role="button"
                 aria-label="Copy post"
-                title="Copy post"
                 onClick={async () => {
                   const text = `${activePost.title}\n\n${activePost.content}`
                   try {
