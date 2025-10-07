@@ -1,447 +1,354 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect, useMemo } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Heart, Bookmark, Share2, Eye, Edit, Trash2, Plus } from 'lucide-react'
-import Link from 'next/link'
-import type { PostResponse } from '@/types/post'
-import { EditPostModal } from '@/components/EditPostModal'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
+import { Heart, Bookmark, Share2, Eye, Edit3, User, Settings } from 'lucide-react'
 
-interface UserPost extends PostResponse {
-  isPublic: boolean
-}
-
-interface Bookmark {
-  id: string
-  post: PostResponse
-}
-
-interface DashboardStats {
-  totalPosts: number
-  totalLikes: number
-  totalBookmarks: number
-  totalViews: number
-}
-
-export default function Dashboard() {
-  const { user, isLoaded } = useUser()
+export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('posts')
-  const [userPosts, setUserPosts] = useState<UserPost[]>([])
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
-  const [stats, setStats] = useState<DashboardStats>({
-    totalPosts: 0,
-    totalLikes: 0,
-    totalBookmarks: 0,
-    totalViews: 0
-  })
-  const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string>('')
-  const [editingPost, setEditingPost] = useState<UserPost | null>(null)
-  const [showEditModal, setShowEditModal] = useState<boolean>(false)
+  const [posts, setPosts] = useState([])
+  const [bookmarks, setBookmarks] = useState([])
+  const [loading, setLoading] = useState(true)
+  
+  // Username editor state
+  const [currentUsername, setCurrentUsername] = useState<string>('')
+  const [username, setUsername] = useState<string>('')
+  const [available, setAvailable] = useState<boolean | null>(null)
+  const [checking, setChecking] = useState<boolean>(false)
+  const [saving, setSaving] = useState<boolean>(false)
+  const [editingUsername, setEditingUsername] = useState<boolean>(false)
 
-  // Fetch user data
+  const isBasicValid = useMemo(() => {
+    const t = username.trim()
+    return t.length >= 5 && /^[a-zA-Z0-9]+$/.test(t)
+  }, [username])
+
   useEffect(() => {
-    if (!user) return
+    // Only validate if user is actively editing and has typed something
+    if (!editingUsername || !username.trim() || !isBasicValid) { 
+      setAvailable(null)
+      return 
+    }
+    
+    const controller = new AbortController()
+    const id = setTimeout(async () => {
+      try {
+        setChecking(true)
+        const res = await fetch(`/api/user/username/availability?u=${encodeURIComponent(username)}`, { signal: controller.signal })
+        if (!res.ok) return
+        const data = await res.json() as { available: boolean }
+        setAvailable(Boolean(data.available))
+      } catch {
+        // ignore
+      } finally {
+        setChecking(false)
+      }
+    }, 500) // Increased debounce time for better UX
+    return () => { clearTimeout(id); controller.abort() }
+  }, [username, isBasicValid, editingUsername])
 
-    const fetchUserData = async () => {
+  // Load user data
+  useEffect(() => {
+    async function loadData() {
       try {
         setLoading(true)
-        setError('')
-
-        // Fetch user posts
-        const postsResponse = await fetch('/api/posts?userOnly=true')
-        if (!postsResponse.ok) {
-          throw new Error('Failed to fetch user posts')
+        const [postsRes, bookmarksRes, userRes] = await Promise.all([
+          fetch('/api/posts?userOnly=true'),
+          fetch('/api/user/bookmarks'),
+          fetch('/api/user/username/check')
+        ])
+        
+        if (postsRes.ok) {
+          const postsData = await postsRes.json()
+          setPosts(postsData.posts || [])
         }
-        const postsData = await postsResponse.json()
-        setUserPosts(postsData.posts || [])
-
-        // Fetch bookmarks
-        let bookmarksData: { bookmarks: Bookmark[] } = { bookmarks: [] }
-        const bookmarksResponse = await fetch('/api/user/bookmarks')
-        if (bookmarksResponse.ok) {
-          bookmarksData = await bookmarksResponse.json()
+        
+        if (bookmarksRes.ok) {
+          const bookmarksData = await bookmarksRes.json()
           setBookmarks(bookmarksData.bookmarks || [])
         }
 
-        // Calculate stats
-        const totalLikes = postsData.posts?.reduce((sum: number, post: UserPost) => sum + post.likesCount, 0) || 0
-        const totalViews = postsData.posts?.reduce((sum: number, post: UserPost) => sum + post.viewsCount, 0) || 0
-        
-        setStats({
-          totalPosts: postsData.posts?.length || 0,
-          totalLikes,
-          totalBookmarks: bookmarksData.bookmarks?.length || 0,
-          totalViews
-        })
-
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data')
+        if (userRes.ok) {
+          const userData = await userRes.json()
+          setCurrentUsername(userData.username || '')
+        }
+      } catch (error) {
+        console.error('Error loading data:', error)
       } finally {
         setLoading(false)
       }
     }
+    
+    loadData()
+  }, [])
 
-    fetchUserData()
-  }, [user])
-
-  if (!isLoaded || loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-1/3 mb-6"></div>
-            <div className="space-y-4">
-              <div className="h-32 bg-muted rounded"></div>
-              <div className="h-32 bg-muted rounded"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-2xl font-bold mb-4">Sign in to access your dashboard</h1>
-          <p className="text-muted-foreground mb-6">
-            Manage your prompts, bookmarks, and profile settings.
-          </p>
-          <Button asChild>
-            <Link href="/sign-in">Sign In</Link>
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto text-center">
-          <h1 className="text-2xl font-bold mb-4">Error loading dashboard</h1>
-          <p className="text-muted-foreground mb-6">{error}</p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
-        </div>
-      </div>
-    )
-  }
-
-  const handleDeletePost = async (postId: string) => {
+  async function handleSaveUsername() {
+    if (!isBasicValid || available === false) return
     try {
-      const response = await fetch(`/api/posts/${postId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to delete post')
-      }
-
-      setUserPosts(userPosts.filter(post => post.id !== postId))
-      setStats(prev => ({
-        ...prev,
-        totalPosts: prev.totalPosts - 1
-      }))
-    } catch (err) {
-      console.error('Error deleting post:', err)
-      alert(err instanceof Error ? err.message : 'Failed to delete post')
-    }
-  }
-
-  const handleEditPost = (post: UserPost) => {
-    setEditingPost(post)
-    setShowEditModal(true)
-  }
-
-  const handleEditSuccess = (updatedPost: PostResponse) => {
-    setUserPosts(userPosts.map(post => 
-      post.id === updatedPost.id 
-        ? { ...updatedPost, isPublic: updatedPost.isPublic }
-        : post
-    ))
-    setShowEditModal(false)
-    setEditingPost(null)
-  }
-
-  const handleToggleVisibility = async (postId: string) => {
-    try {
-      const post = userPosts.find(p => p.id === postId)
-      if (!post) return
-
-      const response = await fetch(`/api/posts/${postId}`, {
-        method: 'PUT',
+      setSaving(true)
+      const res = await fetch('/api/user/username', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: post.title,
-          content: post.content,
-          model: post.model,
-          purpose: post.purpose,
-          tags: post.tags,
-          isPublic: !post.isPublic
-        })
+        body: JSON.stringify({ username })
       })
-
-      if (response.ok) {
-        setUserPosts(userPosts.map(p => 
-          p.id === postId 
-            ? { ...p, isPublic: !p.isPublic }
-            : p
-        ))
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to update username')
+        return
       }
-    } catch (err) {
-      console.error('Error toggling visibility:', err)
+      toast.success('Username updated')
+      setCurrentUsername(username)
+      setEditingUsername(false)
+      setUsername('')
+    } finally {
+      setSaving(false)
     }
+  }
+
+  function handleEditUsername() {
+    setEditingUsername(true)
+    setUsername('') // Start with empty field
+    setAvailable(null) // Reset validation state
+  }
+
+  function handleCancelEdit() {
+    setEditingUsername(false)
+    setUsername('')
+    setAvailable(null)
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Welcome back, {user.firstName || user.username}!
-          </p>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-lg text-muted-foreground mt-2">Manage your posts, bookmarks, and settings</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg">
-                  <Plus className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Total Posts</p>
-                  <p className="text-lg md:text-2xl font-bold">{stats.totalPosts}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 md:p-2 bg-green-100 rounded-lg">
-                  <Heart className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Total Likes</p>
-                  <p className="text-lg md:text-2xl font-bold">{stats.totalLikes}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 md:p-2 bg-yellow-100 rounded-lg">
-                  <Bookmark className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Bookmarks</p>
-                  <p className="text-lg md:text-2xl font-bold">{stats.totalBookmarks}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-3 md:p-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 md:p-2 bg-purple-100 rounded-lg">
-                  <Eye className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Total Views</p>
-                  <p className="text-lg md:text-2xl font-bold">{stats.totalViews}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="posts">My Posts</TabsTrigger>
-            <TabsTrigger value="bookmarks">Bookmarks</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsTrigger value="posts" className="flex items-center gap-2">
+              <Edit3 className="h-4 w-4" />
+              My Posts
+            </TabsTrigger>
+            <TabsTrigger value="bookmarks" className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4" />
+              Bookmarks
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Settings
+            </TabsTrigger>
           </TabsList>
 
-          {/* My Posts Tab */}
-          <TabsContent value="posts" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">My Posts</h2>
-              <Button asChild>
-                <Link href="/create">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Post
-                </Link>
-              </Button>
-            </div>
-            
-            <div className="space-y-4">
-              {userPosts.map((post) => (
-                <Card key={post.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{post.title}</h3>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {post.content}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleVisibility(post.id)}
-                        >
-                          {post.isPublic ? 'Public' : 'Private'}
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEditPost(post)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeletePost(post.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                        {post.likesCount}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Bookmark className="h-4 w-4" />
-                        {post.bookmarksCount}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Share2 className="h-4 w-4" />
-                        {post.sharesCount}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-4 w-4" />
-                        {post.viewsCount}
-                      </div>
-                      <span className="ml-auto">
-                        {post.createdAt ? new Date(post.createdAt).toLocaleDateString() : 'Recently'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* Bookmarks Tab */}
-          <TabsContent value="bookmarks" className="space-y-4">
-            <h2 className="text-xl font-semibold">Bookmarked Posts</h2>
-            
-            <div className="space-y-4">
-              {bookmarks.map((bookmark) => (
-                <Card key={bookmark.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{bookmark.post.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          by {bookmark.post.author.firstName && bookmark.post.author.lastName 
-                            ? `${bookmark.post.author.firstName} ${bookmark.post.author.lastName}`
-                            : bookmark.post.author.username
-                          } ({bookmark.post.author.username})
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {bookmark.post.content}
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                        {bookmark.post.likesCount}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Bookmark className="h-4 w-4" />
-                        {bookmark.post.bookmarksCount}
-                      </div>
-                      <span className="ml-auto">
-                        {bookmark.post.createdAt ? new Date(bookmark.post.createdAt).toLocaleDateString() : 'Recently'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-4">
-            <h2 className="text-xl font-semibold">Account Settings</h2>
-            
+          <TabsContent value="posts" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Edit3 className="h-5 w-5" />
+                  Your Posts
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Username
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    {user.username || 'Not set'}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Email
-                  </label>
-                  <p className="text-sm text-muted-foreground">
-                    {user.emailAddresses[0]?.emailAddress || 'Not set'}
-                  </p>
-                </div>
-                <Button variant="outline">
-                  Edit Profile
-                </Button>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading posts...</p>
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Edit3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
+                    <p className="text-muted-foreground mb-4">Create your first prompt to get started!</p>
+                    <Button onClick={() => window.location.href = '/create'}>
+                      Create Post
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {posts.map((post: { id: string; title: string; content: string; model: string; purpose: string; tags: string[]; likesCount: number; bookmarksCount: number; sharesCount: number; viewsCount: number }) => (
+                      <Card key={post.id} className="p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-xl mb-3">{post.title}</h3>
+                            <p className="text-muted-foreground mb-4 line-clamp-3">{post.content}</p>
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              <Badge variant="secondary">{post.model}</Badge>
+                              <Badge variant="outline">{post.purpose}</Badge>
+                              {post.tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline" className="text-xs">#{tag}</Badge>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Heart className="h-4 w-4" />
+                                <span>{post.likesCount}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Bookmark className="h-4 w-4" />
+                                <span>{post.bookmarksCount}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Share2 className="h-4 w-4" />
+                                <span>{post.sharesCount}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Eye className="h-4 w-4" />
+                                <span>{post.viewsCount}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <Button variant="outline" size="sm" className="ml-4">
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
 
-        {/* Edit Post Modal */}
-        {editingPost && (
-          <EditPostModal
-            post={editingPost}
-            isOpen={showEditModal}
-            onClose={() => {
-              setShowEditModal(false)
-              setEditingPost(null)
-            }}
-            onSuccess={handleEditSuccess}
-          />
-        )}
+          <TabsContent value="bookmarks" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bookmark className="h-5 w-5" />
+                  Bookmarked Posts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading bookmarks...</p>
+                  </div>
+                ) : bookmarks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Bookmark className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">No bookmarks yet</h3>
+                    <p className="text-muted-foreground">Start bookmarking posts you like!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {bookmarks.map((bookmark: { id: string; post: { id: string; title: string; content: string; model: string; purpose: string; tags: string[]; likesCount: number; bookmarksCount: number; sharesCount: number; viewsCount: number } }) => (
+                      <Card key={bookmark.id} className="p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-xl mb-3">{bookmark.post.title}</h3>
+                            <p className="text-muted-foreground mb-4 line-clamp-3">{bookmark.post.content}</p>
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              <Badge variant="secondary">{bookmark.post.model}</Badge>
+                              <Badge variant="outline">{bookmark.post.purpose}</Badge>
+                              {bookmark.post.tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline" className="text-xs">#{tag}</Badge>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Heart className="h-4 w-4" />
+                                <span>{bookmark.post.likesCount}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Bookmark className="h-4 w-4" />
+                                <span>{bookmark.post.bookmarksCount}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Share2 className="h-4 w-4" />
+                                <span>{bookmark.post.sharesCount}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Eye className="h-4 w-4" />
+                                <span>{bookmark.post.viewsCount}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-6">
+            <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    Profile Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">Current Username</label>
+                        <div className="flex items-center gap-3 mt-2">
+                          <div className="flex-1 p-3 bg-muted rounded-md">
+                            <span className="font-mono">{currentUsername || 'Not set'}</span>
+                          </div>
+                          {!editingUsername && (
+                            <Button variant="outline" onClick={handleEditUsername}>
+                              <Edit3 className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {editingUsername && (
+                        <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                          <div>
+                            <label className="text-sm font-medium">New Username</label>
+                            <Input 
+                              value={username} 
+                              onChange={e => setUsername(e.target.value)} 
+                              placeholder="Enter new username (min 5 characters, alphanumeric only)" 
+                              className="mt-2"
+                              autoFocus
+                            />
+                            <div className="text-sm mt-2 space-y-1">
+                              {checking && <span className="text-muted-foreground">Checking availability…</span>}
+                              {!checking && available === true && <span className="text-green-600">✓ Available</span>}
+                              {!checking && available === false && <span className="text-red-600">✗ Not available</span>}
+                              {!isBasicValid && username.trim() && <span className="text-amber-600">Username must be 5+ characters, alphanumeric only</span>}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              onClick={handleSaveUsername} 
+                              disabled={!isBasicValid || available === false || saving || !username.trim()}
+                              size="sm"
+                            >
+                              {saving ? 'Saving...' : 'Save Changes'}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              onClick={handleCancelEdit}
+                              size="sm"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

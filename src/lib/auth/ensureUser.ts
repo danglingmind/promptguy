@@ -1,45 +1,37 @@
-import { clerkClient } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
-import type { ProvisionedUser } from '@/types/auth'
 
-export async function ensureUserByClerkId(clerkUserId: string): Promise<ProvisionedUser> {
-  const existing = await prisma.user.findUnique({ where: { clerkId: clerkUserId } })
-  if (existing) {
-    return {
-      id: existing.id,
-      clerkId: existing.clerkId,
-      email: existing.email,
-      username: existing.username,
-      firstName: existing.firstName,
-      lastName: existing.lastName,
-      imageUrl: existing.imageUrl
-    }
-  }
-
-  const client = await clerkClient()
-  const clerkUser = await client.users.getUser(clerkUserId)
-
-  const primaryEmail = clerkUser.emailAddresses?.[0]?.emailAddress || ''
-  const username = clerkUser.username || `user_${clerkUserId.slice(-8)}`
-  const created = await prisma.user.create({
+/**
+ * Ensure the application-level user exists for a given Clerk user id.
+ */
+export async function ensureUserByClerkId(clerkId: string) {
+  const existing = await prisma.user.findUnique({ where: { clerkId } })
+  if (existing) return existing
+  // If not found, create a minimal record. Other fields can be filled later.
+  return prisma.user.create({
     data: {
-      clerkId: clerkUserId,
-      email: primaryEmail,
-      username,
-      firstName: clerkUser.firstName,
-      lastName: clerkUser.lastName,
-      imageUrl: clerkUser.imageUrl
+      clerkId,
+      email: `${clerkId}@placeholder.local`,
+      username: `user_${clerkId.slice(0, 8)}`,
     }
   })
+}
 
-  return {
-    id: created.id,
-    clerkId: created.clerkId,
-    email: created.email,
-    username: created.username,
-    firstName: created.firstName,
-    lastName: created.lastName,
-    imageUrl: created.imageUrl
-  }
+export const RESERVED_USERNAMES = new Set([
+  'admin','root','support','system','api','settings','dashboard','me','auth','login','logout','signup','register','help','about','contact'
+])
+
+export function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase()
+}
+
+export function isValidUsernameFormat(username: string): boolean {
+  if (!username) return false
+  const trimmed = username.trim()
+  if (trimmed.length < 5 || trimmed.length > 30) return false
+  return /^[a-zA-Z0-9]+$/.test(trimmed)
+}
+
+export function isReservedUsername(username: string): boolean {
+  return RESERVED_USERNAMES.has(normalizeUsername(username))
 }
 

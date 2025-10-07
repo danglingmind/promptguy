@@ -1,22 +1,20 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
 
-export default function CreatePage() {
-  const router = useRouter()
+export default function SettingsPage() {
   const [username, setUsername] = useState<string>('')
   const [available, setAvailable] = useState<boolean | null>(null)
   const [checking, setChecking] = useState<boolean>(false)
-  const [submitting, setSubmitting] = useState<boolean>(false)
+  const [saving, setSaving] = useState<boolean>(false)
 
   const isBasicValid = useMemo(() => {
-    const trimmed = username.trim()
-    return trimmed.length >= 5 && /^[a-zA-Z0-9]+$/.test(trimmed)
+    const t = username.trim()
+    return t.length >= 5 && /^[a-zA-Z0-9]+$/.test(t)
   }, [username])
 
   useEffect(() => {
@@ -38,50 +36,42 @@ export default function CreatePage() {
     return () => { clearTimeout(id); controller.abort() }
   }, [username, isBasicValid])
 
-  const canSubmit = isBasicValid && available === true && !submitting
-
-  async function handleSubmit() {
-    if (!canSubmit) return
+  async function handleSave() {
+    if (!isBasicValid || available === false) return
     try {
-      setSubmitting(true)
+      setSaving(true)
       const res = await fetch('/api/user/username', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username })
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        toast.error(data.error || 'Failed to set username')
+        toast.error(data.error || 'Failed to update username')
         return
       }
-      toast.success('Username set successfully')
-      router.push('/dashboard')
+      toast.success('Username updated')
     } finally {
-      setSubmitting(false)
+      setSaving(false)
     }
   }
 
   return (
-    <div className="max-w-md mx-auto p-4">
+    <div className="max-w-3xl mx-auto p-4 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Choose your username</CardTitle>
+          <CardTitle>Edit Profile</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <Input
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="Enter a username (min 5, alphanumeric)"
-            />
+            <label className="text-sm font-medium">Username</label>
+            <Input value={username} onChange={e => setUsername(e.target.value)} placeholder="Your username" />
             <div className="text-sm">
               {checking && <span className="text-muted-foreground">Checking availability…</span>}
               {!checking && available === true && <span className="text-green-600">Available</span>}
               {!checking && available === false && <span className="text-red-600">Not available</span>}
             </div>
-            <Button disabled={!canSubmit} onClick={handleSubmit}>
-              Continue
-            </Button>
+            <Button onClick={handleSave} disabled={!isBasicValid || available === false || saving}>Save changes</Button>
           </div>
         </CardContent>
       </Card>
