@@ -12,6 +12,7 @@ import { FEED_FILTERS, type FeedFilterKey } from '@/lib/filters/feed-filters'
 import { SignedIn, SignedOut } from '@clerk/nextjs'
 import { LandingPage } from '@/components/LandingPage'
 import Image from 'next/image'
+import { toast } from 'sonner'
 
 export function Feed() {
   return (
@@ -125,15 +126,24 @@ function AuthenticatedFeed() {
       
       if (response.ok) {
         const data = await response.json()
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { 
-            ...post, 
-                likesCount: data.liked ? post.likesCount + 1 : post.likesCount - 1
-          }
-        : post
-    ))
-  }
+        setPosts(posts.map(post => 
+          post.id === postId 
+            ? { 
+                ...post, 
+                likesCount: data.liked ? post.likesCount + 1 : post.likesCount - 1,
+                isLikedByCurrentUser: data.liked
+              }
+            : post
+        ))
+        setActivePost(prev => prev && prev.id === postId 
+          ? { 
+              ...prev, 
+              likesCount: data.liked ? prev.likesCount + 1 : prev.likesCount - 1,
+              isLikedByCurrentUser: data.liked
+            } 
+          : prev
+        )
+      }
     } catch (err) {
       console.error('Error liking post:', err)
     }
@@ -149,15 +159,24 @@ function AuthenticatedFeed() {
       
       if (response.ok) {
         const data = await response.json()
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { 
-            ...post, 
-                bookmarksCount: data.bookmarked ? post.bookmarksCount + 1 : post.bookmarksCount - 1
-          }
-        : post
-    ))
-  }
+        setPosts(posts.map(post => 
+          post.id === postId 
+            ? { 
+                ...post, 
+                bookmarksCount: data.bookmarked ? post.bookmarksCount + 1 : post.bookmarksCount - 1,
+                isBookmarkedByCurrentUser: data.bookmarked
+              }
+            : post
+        ))
+        setActivePost(prev => prev && prev.id === postId 
+          ? { 
+              ...prev, 
+              bookmarksCount: data.bookmarked ? prev.bookmarksCount + 1 : prev.bookmarksCount - 1,
+              isBookmarkedByCurrentUser: data.bookmarked
+            } 
+          : prev
+        )
+      }
     } catch (err) {
       console.error('Error bookmarking post:', err)
     }
@@ -165,22 +184,18 @@ function AuthenticatedFeed() {
 
   const handleShare = async (postId: string) => {
     try {
-      const response = await fetch('/api/interactions/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId })
-      })
-      
-      if (response.ok) {
-    setPosts(posts.map(post => 
-      post.id === postId 
-        ? { 
-            ...post, 
-            sharesCount: post.sharesCount + 1
-          }
-        : post
-    ))
+      const url = `${window.location.origin}/?post=${postId}`
+      try {
+        await navigator.clipboard.writeText(url)
+      } catch {
+        const ta = document.createElement('textarea')
+        ta.value = url
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
       }
+      toast.success('Link copied to clipboard')
     } catch (err) {
       console.error('Error sharing post:', err)
     }
@@ -239,6 +254,29 @@ function AuthenticatedFeed() {
       }
     }
   ]
+
+  // Auto-open dialog when deep-linked via /?post=<id>
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const postId = params.get('post')
+    if (!postId) return
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/posts/${postId}`)
+        if (res.status === 401) {
+          const redirectUrl = encodeURIComponent(`${window.location.origin}/?post=${postId}`)
+          window.location.href = `/sign-in?redirect_url=${redirectUrl}`
+          return
+        }
+        if (!res.ok) return
+        const data = (await res.json()) as PostResponse
+        setActivePost(data)
+        setOpen(true)
+      } catch {
+        // ignore
+      }
+    })()
+  }, [])
 
   if (loading) {
     return (
@@ -387,7 +425,7 @@ function AuthenticatedFeed() {
               <CardContent className="pt-0">
                 <h4 className="text-lg md:text-xl font-semibold mb-2 md:mb-3 leading-tight">{post.title}</h4>
                   <p className="text-muted-foreground mb-3 md:mb-4 line-clamp-3 whitespace-pre-wrap text-sm md:text-base leading-relaxed">{post.content}</p>
-                
+                  
                 <div className="flex flex-wrap gap-1 md:gap-2 mb-3 md:mb-4">
                   {post.tags.map((tag) => (
                     <Badge key={tag} variant="outline" className="text-xs rounded-md">#{tag}</Badge>
@@ -397,20 +435,19 @@ function AuthenticatedFeed() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4 md:gap-6 text-xs md:text-sm text-muted-foreground">
                     <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleLike(post.id) }} aria-label="Like">
-                      <Heart className="h-3 w-3 md:h-4 md:w-4" />
+                      <Heart className={`h-3 w-3 md:h-4 md:w-4 ${post.isLikedByCurrentUser ? 'text-red-500 fill-red-500' : ''}`} />
                       <span>{post.likesCount}</span>
                     </div>
                     <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleBookmark(post.id) }} aria-label="Bookmark">
-                      <Bookmark className="h-3 w-3 md:h-4 md:w-4" />
+                      <Bookmark className={`h-3 w-3 md:h-4 md:w-4 ${post.isBookmarkedByCurrentUser ? 'text-amber-500 fill-amber-500' : ''}`} />
                       <span>{post.bookmarksCount}</span>
-                    </div>
-                    <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={(e) => { e.stopPropagation(); handleShare(post.id) }} aria-label="Share">
-                      <Share2 className="h-3 w-3 md:h-4 md:w-4" />
-                      <span>{post.sharesCount}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Eye className="h-3 w-3 md:h-4 md:w-4" />
                       <span>{post.viewsCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1 cursor-pointer hover:text-foreground ml-4 md:ml-6" onClick={(e) => { e.stopPropagation(); handleShare(post.id) }} aria-label="Share">
+                      <Share2 className="h-3 w-3 md:h-4 md:w-4" />
                     </div>
                   </div>
                   <div className="text-xs md:text-sm text-muted-foreground flex-shrink-0">
@@ -496,6 +533,7 @@ function AuthenticatedFeed() {
                   const text = `${activePost.title}\n\n${activePost.content}`
                   try {
                     await navigator.clipboard.writeText(text)
+                    toast.success('Post copied to clipboard')
                   } catch {
                     const ta = document.createElement('textarea')
                     ta.value = text
@@ -503,6 +541,7 @@ function AuthenticatedFeed() {
                     ta.select()
                     document.execCommand('copy')
                     document.body.removeChild(ta)
+                    toast.success('Post copied to clipboard')
                   }
                 }}
               />
@@ -516,34 +555,21 @@ function AuthenticatedFeed() {
               ))}
             </div>
             <div className="flex items-center justify-between pt-2 pr-8">
-              <div className="flex items-center gap-6">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleLike(activePost.id)}
-                >
-                  <Heart className="h-4 w-4 mr-1" />
-                  {activePost.likesCount}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleBookmark(activePost.id)}
-                >
-                  <Bookmark className="h-4 w-4 mr-1" />
-                  {activePost.bookmarksCount}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleShare(activePost.id)}
-                >
-                  <Share2 className="h-4 w-4 mr-1" />
-                  {activePost.sharesCount}
-                </Button>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Eye className="h-4 w-4" />
-                  {activePost.viewsCount}
+              <div className="flex items-center gap-4 md:gap-6 text-xs md:text-sm text-muted-foreground">
+                <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={() => handleLike(activePost.id)} aria-label="Like">
+                  <Heart className={`h-3 w-3 md:h-4 md:w-4 ${activePost.isLikedByCurrentUser ? 'text-red-500 fill-red-500' : ''}`} />
+                  <span>{activePost.likesCount}</span>
+                </div>
+                <div className="flex items-center gap-1 cursor-pointer hover:text-foreground" onClick={() => handleBookmark(activePost.id)} aria-label="Bookmark">
+                  <Bookmark className={`h-3 w-3 md:h-4 md:w-4 ${activePost.isBookmarkedByCurrentUser ? 'text-amber-500 fill-amber-500' : ''}`} />
+                  <span>{activePost.bookmarksCount}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Eye className="h-3 w-3 md:h-4 md:w-4" />
+                  <span>{activePost.viewsCount}</span>
+                </div>
+                <div className="flex items-center gap-1 cursor-pointer hover:text-foreground ml-4 md:ml-6" onClick={() => handleShare(activePost.id)} aria-label="Share">
+                  <Share2 className="h-3 w-3 md:h-4 md:w-4" />
                 </div>
               </div>
               {/* Date moved to top-right */}

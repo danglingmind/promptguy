@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes';
 import { Navbar } from '@/components/Navbar';
 import "./globals.css";
 import { BrandThemeLoader } from "@/components/BrandThemeLoader";
+import { Toaster } from 'sonner';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,6 +44,7 @@ export default function RootLayout({
             <main className="min-h-screen">
               {children}
             </main>
+            <Toaster richColors position="top-center" />
           </ThemeProvider>
         </body>
       </html>

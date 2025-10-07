@@ -80,6 +80,13 @@ export async function GET(request: NextRequest) {
       })
     ])
 
+    // If authenticated, resolve local user id for per-user flags
+    let currentUserLocalId: string | undefined
+    if (clerkUserId) {
+      const user = await ensureUserByClerkId(clerkUserId)
+      currentUserLocalId = user.id
+    }
+
     const latest = meta._max.updatedAt?.toISOString() || '0'
     const total = String(meta._count._all || 0)
     const etag = `W/"${latest}:${total}:${page}:${limit}:${sortByParam}:${orderParam}:${model ?? ''}:${purpose ?? ''}:${search ?? ''}"`
@@ -111,10 +118,10 @@ export async function GET(request: NextRequest) {
         },
         createdAt: p.createdAt.toISOString(),
         isLikedByCurrentUser: Boolean(
-          clerkUserId && p.likes.some((l: { userId: string }) => l.userId === (authorId as string | undefined ?? ''))
+          currentUserLocalId && p.likes.some((l: { userId: string }) => l.userId === currentUserLocalId)
         ),
         isBookmarkedByCurrentUser: Boolean(
-          clerkUserId && p.bookmarks.some((b: { userId: string }) => b.userId === (authorId as string | undefined ?? ''))
+          currentUserLocalId && p.bookmarks.some((b: { userId: string }) => b.userId === currentUserLocalId)
         )
       })),
       hasMore: posts.length === limit
