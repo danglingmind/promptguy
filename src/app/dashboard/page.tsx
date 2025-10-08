@@ -238,8 +238,10 @@ export default function DashboardPage() {
                       <Card key={post.id} className="p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                            <h3 className="font-semibold text-xl mb-3">{post.title}</h3>
-                            <p className="text-muted-foreground mb-4 line-clamp-3">{post.content}</p>
+                            <h3 className="font-semibold text-xl mb-3 break-words">{post.title}</h3>
+                            <pre className="text-sm md:text-[15px] leading-6 text-muted-foreground mb-4 whitespace-pre-wrap break-words max-h-24 md:max-h-32 overflow-hidden [mask-image:linear-gradient(180deg,black_70%,transparent)]">
+                          {post.content}
+                            </pre>
                             <div className="flex flex-wrap gap-2 mb-4">
                               <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-medium">
                                 {post.model}
@@ -323,8 +325,10 @@ export default function DashboardPage() {
                       <Card key={bookmark.id} className="p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                            <h3 className="font-semibold text-xl mb-3">{bookmark.post.title}</h3>
-                            <p className="text-muted-foreground mb-4 line-clamp-3">{bookmark.post.content}</p>
+                            <h3 className="font-semibold text-xl mb-3 break-words">{bookmark.post.title}</h3>
+                            <pre className="text-sm md:text-[15px] leading-6 text-muted-foreground mb-4 whitespace-pre-wrap break-words max-h-24 md:max-h-32 overflow-hidden [mask-image:linear-gradient(180deg,black_70%,transparent)]">
+                          {bookmark.post.content}
+                            </pre>
                             <div className="flex flex-wrap gap-2 mb-4">
                               <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-medium">
                                 {bookmark.post.model}
