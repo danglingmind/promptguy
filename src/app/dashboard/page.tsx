@@ -230,7 +230,7 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground mb-4">Create your first prompt to get started!</p>
                     <Button onClick={() => window.location.href = '/create-post'}>
                       Create Post
-                    </Button>
+              </Button>
             </div>
                 ) : (
                   <div className="space-y-6">
@@ -241,8 +241,12 @@ export default function DashboardPage() {
                             <h3 className="font-semibold text-xl mb-3">{post.title}</h3>
                             <p className="text-muted-foreground mb-4 line-clamp-3">{post.content}</p>
                             <div className="flex flex-wrap gap-2 mb-4">
-                              <Badge variant="secondary">{post.model}</Badge>
-                              <Badge variant="secondary">{post.purpose}</Badge>
+                              <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-medium">
+                                {post.model}
+                              </Badge>
+                              <Badge variant="outline" className="border-green-200 text-green-700 dark:border-green-800 dark:text-green-300">
+                                {post.purpose}
+                              </Badge>
                               {post.tags.map((tag: string) => (
                                 <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
                               ))}
@@ -322,8 +326,12 @@ export default function DashboardPage() {
                             <h3 className="font-semibold text-xl mb-3">{bookmark.post.title}</h3>
                             <p className="text-muted-foreground mb-4 line-clamp-3">{bookmark.post.content}</p>
                             <div className="flex flex-wrap gap-2 mb-4">
-                              <Badge variant="secondary">{bookmark.post.model}</Badge>
-                              <Badge variant="outline">{bookmark.post.purpose}</Badge>
+                              <Badge variant="default" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 font-medium">
+                                {bookmark.post.model}
+                              </Badge>
+                              <Badge variant="outline" className="border-green-200 text-green-700 dark:border-green-800 dark:text-green-300">
+                                {bookmark.post.purpose}
+                              </Badge>
                               {bookmark.post.tags.map((tag: string) => (
                                 <Badge key={tag} variant="outline" className="text-xs">#{tag}</Badge>
                               ))}
