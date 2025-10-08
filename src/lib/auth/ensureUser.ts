@@ -11,7 +11,7 @@ export async function ensureUserByClerkId(clerkId: string) {
     data: {
       clerkId,
       email: `${clerkId}@placeholder.local`,
-      username: `user_${clerkId.slice(0, 8)}`,
+      username: `user_${clerkId.slice(0, 8)}_temp`,
     }
   })
 }

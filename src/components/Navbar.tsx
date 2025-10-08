@@ -36,8 +36,8 @@ export function Navbar() {
           <Link href="/dashboard" className="px-3 py-2 rounded-md text-sm hover:bg-muted">
             Dashboard
           </Link>
-          <Link href="/create" className="px-3 py-2 rounded-md text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center">
-            <Plus className="h-4 w-4 mr-2" /> Create
+          <Link href="/create-post" className="mr-4 px-2 py-2 rounded-full text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center">
+            <Plus className="h-4 w-4" />
           </Link>
           <SignedIn>
             <UserButton afterSignOutUrl="/" />
@@ -93,7 +93,7 @@ export function Navbar() {
                 </Link>
                 
                 <Link 
-                  href="/create" 
+                  href="/create-post" 
                   className="block px-3 py-3 rounded-md text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center"
                   onClick={closeMobileMenu}
                 >

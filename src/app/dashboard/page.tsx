@@ -188,9 +188,9 @@ export default function DashboardPage() {
                     <Edit3 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
                     <p className="text-muted-foreground mb-4">Create your first prompt to get started!</p>
-                    <Button onClick={() => window.location.href = '/create'}>
+                    <Button onClick={() => window.location.href = '/create-post'}>
                       Create Post
-              </Button>
+                    </Button>
             </div>
                 ) : (
                   <div className="space-y-6">

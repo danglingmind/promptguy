@@ -20,12 +20,14 @@ export function UsernameCheck({ children }: UsernameCheckProps) {
           setChecking(false)
           return
         }
-        if (res.status === 404) {
-          // No username set, redirect to create
-          router.push('/create')
-          return
-        }
         if (res.ok) {
+          const data = await res.json()
+          if (!data.hasUsername) {
+            // No username set, redirect to create
+            router.push('/create')
+            return
+          }
+          // Username exists, show content
           setChecking(false)
         }
       } catch {

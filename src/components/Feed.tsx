@@ -333,7 +333,7 @@ function AuthenticatedFeed() {
             <h2 className="text-xl md:text-2xl font-bold">All Posts</h2>
             <div className="flex gap-2 flex-wrap">
               {activeFilters.map(f => (
-                <Button key={`${f.key}-${f.label}`} variant="outline" size="sm" className="text-xs" onClick={async () => {
+                <Button key={`${f.key}-${f.label}`} variant="secondary" size="sm" className="text-xs" onClick={async () => {
                   setActiveFilters(prev => prev.filter(x => x.key !== f.key))
                   setFilterParams(prev => ({ ...prev, ...(f.key === 'featured' ? { sortBy: undefined, order: undefined, purpose: undefined } : { [f.key]: undefined as unknown as string }) }))
                   await refetchWithFilters()
@@ -348,7 +348,7 @@ function AuthenticatedFeed() {
             {(['latest','popular','trending'] as FeedFilterKey[]).map(key => (
               <Button
                 key={key}
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="text-xs"
                 onClick={async () => {
@@ -418,7 +418,7 @@ function AuthenticatedFeed() {
                   </div>
                   <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground flex-shrink-0">
                     <Badge variant="secondary" className="rounded-full px-1 md:px-2 py-0 h-5 md:h-6 text-xs">{post.model}</Badge>
-                    <Badge className="rounded-full px-1 md:px-2 py-0 h-5 md:h-6 text-xs" variant="outline">{post.purpose}</Badge>
+                    <Badge className="rounded-full px-1 md:px-2 py-0 h-5 md:h-6 text-xs" variant="secondary">{post.purpose}</Badge>
                   </div>
                 </div>
               </CardHeader>
@@ -428,7 +428,7 @@ function AuthenticatedFeed() {
                   
                 <div className="flex flex-wrap gap-1 md:gap-2 mb-3 md:mb-4">
                   {post.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs rounded-md">#{tag}</Badge>
+                    <Badge key={tag} variant="secondary" className="text-xs rounded-md">#{tag}</Badge>
                   ))}
                 </div>
 
@@ -461,7 +461,7 @@ function AuthenticatedFeed() {
           {hasMore && (
             <div className="flex justify-center py-6">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 disabled={loading}
                 onClick={async (e) => {
@@ -483,9 +483,9 @@ function AuthenticatedFeed() {
       </div>
     {/* Post Dialog */}
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setOpen(false); setActivePost(null) } }}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         {activePost && (
-          <div className="space-y-4 relative">
+          <div className="space-y-4 relative flex-1 overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle className="text-2xl">{activePost.title}</DialogTitle>
             </DialogHeader>
@@ -521,12 +521,12 @@ function AuthenticatedFeed() {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Badge variant="secondary" className="rounded-full px-2 py-0 h-6">{activePost.model}</Badge>
-                <Badge className="rounded-full px-2 py-0 h-6" variant="outline">{activePost.purpose}</Badge>
+                <Badge className="rounded-full px-2 py-0 h-6" variant="secondary">{activePost.purpose}</Badge>
               </div>
             </div>
-            <div className="relative rounded-md bg-muted/60 border border-border/60 overflow-x-auto">
+            <div className="relative rounded-md bg-muted/60 border border-border/60 overflow-hidden flex-1 flex flex-col">
               <Copy
-                className="h-4 w-4 absolute top-2 right-2 cursor-pointer text-muted-foreground hover:text-foreground"
+                className="h-4 w-4 absolute top-2 right-2 cursor-pointer text-muted-foreground hover:text-foreground z-10"
                 role="button"
                 aria-label="Copy post"
                 onClick={async () => {
@@ -545,13 +545,13 @@ function AuthenticatedFeed() {
                   }
                 }}
               />
-              <pre className="p-4 pr-8 text-sm leading-6 whitespace-pre-wrap">
+              <pre className="p-4 pr-8 text-sm leading-6 whitespace-pre-wrap overflow-y-auto flex-1">
                 <code>{activePost.content}</code>
               </pre>
             </div>
             <div className="flex flex-wrap gap-2">
               {activePost.tags.map((tag) => (
-                <Badge key={tag} variant="outline" className="text-xs rounded-md">#{tag}</Badge>
+                <Badge key={tag} variant="secondary" className="text-xs rounded-md">#{tag}</Badge>
               ))}
             </div>
             <div className="flex items-center justify-between pt-2 pr-8">
