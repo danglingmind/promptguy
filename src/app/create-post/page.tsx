@@ -7,17 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { MODEL_OPTIONS, PURPOSE_OPTIONS } from '@/lib/constants'
 import type { CreatePostRequestBody } from '@/types/post'
-
-const modelOptions = [
-  'GPT-4', 'GPT-3.5', 'Claude-3', 'Claude-2', 'Gemini Pro',
-  'Stable Diffusion', 'Midjourney', 'DALL-E', 'Other'
-]
-
-const purposeOptions = [
-  'Code Review', 'Creative Writing', 'Data Analysis', 'Image Generation',
-  'Productivity', 'Learning', 'Research', 'Marketing', 'Other'
-]
 
 export default function CreatePostPage() {
   const router = useRouter()
@@ -119,7 +110,7 @@ export default function CreatePostPage() {
                 required
               >
                 <option value="">Select a model</option>
-                {modelOptions.map((model) => (
+                {MODEL_OPTIONS.map((model) => (
                   <option key={model} value={model}>{model}</option>
                 ))}
               </select>
@@ -134,7 +125,7 @@ export default function CreatePostPage() {
                 required
               >
                 <option value="">Select a purpose</option>
-                {purposeOptions.map((purpose) => (
+                {PURPOSE_OPTIONS.map((purpose) => (
                   <option key={purpose} value={purpose}>{purpose}</option>
                 ))}
               </select>

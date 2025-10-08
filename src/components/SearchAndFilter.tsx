@@ -5,35 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Search, Filter, X } from 'lucide-react'
-
-const modelOptions = [
-  'GPT-4',
-  'GPT-3.5',
-  'Claude-3',
-  'Claude-2',
-  'Gemini Pro',
-  'Stable Diffusion',
-  'Midjourney',
-  'DALL-E'
-]
-
-const purposeOptions = [
-  'Code Review',
-  'Creative Writing',
-  'Data Analysis',
-  'Image Generation',
-  'Productivity',
-  'Learning',
-  'Research',
-  'Marketing'
-]
-
-const sortOptions = [
-  { value: 'createdAt', label: 'Latest' },
-  { value: 'likesCount', label: 'Most Liked' },
-  { value: 'bookmarksCount', label: 'Most Bookmarked' },
-  { value: 'viewsCount', label: 'Most Viewed' }
-]
+import { MODEL_OPTIONS, PURPOSE_OPTIONS, SORT_OPTIONS } from '@/lib/constants'
 
 interface SearchAndFilterProps {
   onSearch: (params: {
@@ -130,7 +102,7 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
                     className="w-full p-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">All Models</option>
-                    {modelOptions.map((model) => (
+                    {MODEL_OPTIONS.map((model) => (
                       <option key={model} value={model}>{model}</option>
                     ))}
                   </select>
@@ -147,7 +119,7 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
                     className="w-full p-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">All Purposes</option>
-                    {purposeOptions.map((purpose) => (
+                    {PURPOSE_OPTIONS.map((purpose) => (
                       <option key={purpose} value={purpose}>{purpose}</option>
                     ))}
                   </select>
@@ -164,7 +136,7 @@ export function SearchAndFilter({ onSearch }: SearchAndFilterProps) {
                       onChange={(e) => setSortBy(e.target.value)}
                       className="flex-1 p-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      {sortOptions.map((option) => (
+                      {SORT_OPTIONS.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
                         </option>
