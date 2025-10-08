@@ -6,14 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { EditPostModal } from '@/components/EditPostModal'
 import { toast } from 'sonner'
 import { Heart, Bookmark, Share2, Eye, Edit3, User, Settings } from 'lucide-react'
+import type { PostResponse } from '@/types/post'
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('posts')
-  const [posts, setPosts] = useState([])
+  const [posts, setPosts] = useState<PostResponse[]>([])
   const [bookmarks, setBookmarks] = useState([])
   const [loading, setLoading] = useState(true)
+  
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false)
+  const [postToEdit, setPostToEdit] = useState<PostResponse | null>(null)
   
   // Username editor state
   const [currentUsername, setCurrentUsername] = useState<string>('')
@@ -83,7 +89,7 @@ export default function DashboardPage() {
         setLoading(false)
       }
     }
-    
+
     loadData()
   }, [])
 
@@ -120,6 +126,23 @@ export default function DashboardPage() {
     setEditingUsername(false)
     setUsername('')
     setAvailable(null)
+  }
+
+  const handleEditPost = (post: PostResponse) => {
+    setPostToEdit(post)
+    setEditModalOpen(true)
+  }
+
+  const handleEditSuccess = (updatedPost: PostResponse) => {
+    setPosts(posts.map(post => post.id === updatedPost.id ? updatedPost : post))
+    setEditModalOpen(false)
+    setPostToEdit(null)
+    toast.success('Post updated successfully')
+  }
+
+  const handleEditClose = () => {
+    setEditModalOpen(false)
+    setPostToEdit(null)
   }
 
   return (
@@ -167,50 +190,55 @@ export default function DashboardPage() {
                     <p className="text-muted-foreground mb-4">Create your first prompt to get started!</p>
                     <Button onClick={() => window.location.href = '/create'}>
                       Create Post
-                    </Button>
-                  </div>
+              </Button>
+            </div>
                 ) : (
                   <div className="space-y-6">
-                    {posts.map((post: { id: string; title: string; content: string; model: string; purpose: string; tags: string[]; likesCount: number; bookmarksCount: number; sharesCount: number; viewsCount: number }) => (
+                    {posts.map((post: PostResponse) => (
                       <Card key={post.id} className="p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
                             <h3 className="font-semibold text-xl mb-3">{post.title}</h3>
                             <p className="text-muted-foreground mb-4 line-clamp-3">{post.content}</p>
                             <div className="flex flex-wrap gap-2 mb-4">
                               <Badge variant="secondary">{post.model}</Badge>
-                              <Badge variant="outline">{post.purpose}</Badge>
+                              <Badge variant="secondary">{post.purpose}</Badge>
                               {post.tags.map((tag: string) => (
-                                <Badge key={tag} variant="outline" className="text-xs">#{tag}</Badge>
+                                <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
                               ))}
-                            </div>
+                      </div>
                             <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Heart className="h-4 w-4" />
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4" />
                                 <span>{post.likesCount}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Bookmark className="h-4 w-4" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Bookmark className="h-4 w-4" />
                                 <span>{post.bookmarksCount}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Share2 className="h-4 w-4" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Share2 className="h-4 w-4" />
                                 <span>{post.sharesCount}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Eye className="h-4 w-4" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" />
                                 <span>{post.viewsCount}</span>
                               </div>
                             </div>
-                          </div>
-                          <Button variant="outline" size="sm" className="ml-4">
+                      </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="ml-4"
+                            onClick={() => handleEditPost(post)}
+                          >
                             <Edit3 className="h-4 w-4 mr-2" />
                             Edit
                           </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                    </div>
+                </Card>
+              ))}
+            </div>
                 )}
               </CardContent>
             </Card>
@@ -218,7 +246,7 @@ export default function DashboardPage() {
 
           <TabsContent value="bookmarks" className="mt-6">
             <Card>
-              <CardHeader>
+                  <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bookmark className="h-5 w-5" />
                   Bookmarked Posts
@@ -240,8 +268,8 @@ export default function DashboardPage() {
                   <div className="space-y-6">
                     {bookmarks.map((bookmark: { id: string; post: { id: string; title: string; content: string; model: string; purpose: string; tags: string[]; likesCount: number; bookmarksCount: number; sharesCount: number; viewsCount: number } }) => (
                       <Card key={bookmark.id} className="p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
                             <h3 className="font-semibold text-xl mb-3">{bookmark.post.title}</h3>
                             <p className="text-muted-foreground mb-4 line-clamp-3">{bookmark.post.content}</p>
                             <div className="flex flex-wrap gap-2 mb-4">
@@ -250,14 +278,14 @@ export default function DashboardPage() {
                               {bookmark.post.tags.map((tag: string) => (
                                 <Badge key={tag} variant="outline" className="text-xs">#{tag}</Badge>
                               ))}
-                            </div>
+                      </div>
                             <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Heart className="h-4 w-4" />
+                      <div className="flex items-center gap-1">
+                        <Heart className="h-4 w-4" />
                                 <span>{bookmark.post.likesCount}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Bookmark className="h-4 w-4" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Bookmark className="h-4 w-4" />
                                 <span>{bookmark.post.bookmarksCount}</span>
                               </div>
                               <div className="flex items-center gap-1">
@@ -269,11 +297,11 @@ export default function DashboardPage() {
                                 <span>{bookmark.post.viewsCount}</span>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                      </div>
+                    </div>
+                </Card>
+              ))}
+            </div>
                 )}
               </CardContent>
             </Card>
@@ -281,17 +309,17 @@ export default function DashboardPage() {
 
           <TabsContent value="settings" className="mt-6">
             <div className="grid gap-6">
-              <Card>
-                <CardHeader>
+            <Card>
+              <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <User className="h-5 w-5" />
                     Profile Settings
                   </CardTitle>
-                </CardHeader>
+              </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     <div className="space-y-4">
-                      <div>
+                <div>
                         <label className="text-sm font-medium">Current Username</label>
                         <div className="flex items-center gap-3 mt-2">
                           <div className="flex-1 p-3 bg-muted rounded-md">
@@ -304,11 +332,11 @@ export default function DashboardPage() {
                             </Button>
                           )}
                         </div>
-                      </div>
+                </div>
 
                       {editingUsername && (
                         <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                          <div>
+                <div>
                             <label className="text-sm font-medium">New Username</label>
                             <Input 
                               value={username} 
@@ -323,7 +351,7 @@ export default function DashboardPage() {
                               {!checking && available === false && <span className="text-red-600">✗ Not available</span>}
                               {!isBasicValid && username.trim() && <span className="text-amber-600">Username must be 5+ characters, alphanumeric only</span>}
                             </div>
-                          </div>
+                </div>
                           <div className="flex gap-2">
                             <Button 
                               onClick={handleSaveUsername} 
@@ -338,17 +366,27 @@ export default function DashboardPage() {
                               size="sm"
                             >
                               Cancel
-                            </Button>
+                </Button>
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+              </CardContent>
+            </Card>
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Post Modal */}
+        {postToEdit && (
+          <EditPostModal
+            post={postToEdit}
+            isOpen={editModalOpen}
+            onClose={handleEditClose}
+            onSuccess={handleEditSuccess}
+          />
+        )}
       </div>
     </div>
   )
