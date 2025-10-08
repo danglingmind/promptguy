@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { EditPostModal } from '@/components/EditPostModal'
 import { toast } from 'sonner'
-import { Heart, Bookmark, Share2, Eye, Edit3, User, Settings } from 'lucide-react'
+import { Heart, Bookmark, Share2, Eye, Edit3, User, Settings, Trash2, AlertTriangle } from 'lucide-react'
 import type { PostResponse } from '@/types/post'
 
 export default function DashboardPage() {
@@ -20,6 +21,10 @@ export default function DashboardPage() {
   // Edit modal state
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false)
   const [postToEdit, setPostToEdit] = useState<PostResponse | null>(null)
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false)
+  const [postToDelete, setPostToDelete] = useState<PostResponse | null>(null)
   
   // Username editor state
   const [currentUsername, setCurrentUsername] = useState<string>('')
@@ -145,6 +150,41 @@ export default function DashboardPage() {
     setPostToEdit(null)
   }
 
+  const handleDeleteClick = (post: PostResponse) => {
+    setPostToDelete(post)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!postToDelete) return
+
+    try {
+      const response = await fetch(`/api/posts/${postToDelete.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        toast.error(data.error || 'Failed to delete post')
+        return
+      }
+
+      // Remove the post from the local state
+      setPosts(posts.filter(post => post.id !== postToDelete.id))
+      toast.success('Post deleted successfully')
+      setDeleteDialogOpen(false)
+      setPostToDelete(null)
+    } catch (error) {
+      console.error('Error deleting post:', error)
+      toast.error('Failed to delete post')
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false)
+    setPostToDelete(null)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -226,15 +266,24 @@ export default function DashboardPage() {
                               </div>
                             </div>
                       </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="ml-4"
-                            onClick={() => handleEditPost(post)}
-                          >
-                            <Edit3 className="h-4 w-4 mr-2" />
-                            Edit
-                          </Button>
+                          <div className="flex items-center gap-1 ml-4">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleEditPost(post)}
+                              className="h-8 w-8 p-0 hover:bg-muted"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleDeleteClick(post)}
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                     </div>
                 </Card>
               ))}
@@ -387,6 +436,34 @@ export default function DashboardPage() {
             onSuccess={handleEditSuccess}
           />
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Delete Post
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete &ldquo;{postToDelete?.title}&rdquo;? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={handleDeleteCancel}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteConfirm}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Post
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
