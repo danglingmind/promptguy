@@ -1,17 +1,23 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useUser } from '@clerk/nextjs'
 import { MODEL_OPTIONS, PURPOSE_OPTIONS } from '@/lib/constants'
+import { savePostDraft, getPostDraft, clearPostDraft } from '@/lib/postDraft'
+import { handlePostCreationAfterAuth } from '@/lib/postCreationHandler'
 import type { CreatePostRequestBody } from '@/types/post'
+import { useClerk } from '@clerk/nextjs'
 
 export default function CreatePostPage() {
   const router = useRouter()
+  const { user, isLoaded } = useUser()
+  const { openSignIn } = useClerk()
   const [formData, setFormData] = useState<CreatePostRequestBody>({
     title: '',
     content: '',
@@ -24,10 +30,57 @@ export default function CreatePostPage() {
   const [submitting, setSubmitting] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
 
+  // Load draft on component mount and handle post-authentication
+  useEffect(() => {
+    if (isLoaded) {
+      if (!user) {
+        const draft = getPostDraft()
+        if (draft) {
+          setFormData(draft)
+          toast.info('Restored your draft post. Please sign in to continue.')
+        }
+      } else {
+        // User is authenticated, check if there's a draft to auto-create
+        const draft = getPostDraft()
+        if (draft) {
+          handlePostCreationAfterAuth().then((success) => {
+            if (success) {
+              toast.success('Post created successfully!')
+              router.push('/')
+            } else {
+              setFormData(draft)
+              toast.error('Failed to create post. Please try again.')
+            }
+          })
+        }
+      }
+    }
+  }, [isLoaded, user, router])
+
+  // Save draft when form data changes (for unauthenticated users)
+  useEffect(() => {
+    if (isLoaded && !user && (formData.title || formData.content)) {
+      savePostDraft(formData)
+    }
+  }, [formData, isLoaded, user])
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!formData.title || !formData.content || !formData.model || !formData.purpose) {
       setError('Please fill all required fields')
+      return
+    }
+
+    // Check if user is authenticated
+    if (!user) {
+      // Save draft and open Clerk sign-in
+      savePostDraft(formData)
+      toast.info('Please sign in to create your post. Your draft has been saved.')
+      if (openSignIn) {
+        openSignIn({ afterSignInUrl: '/create-post', afterSignUpUrl: '/create-post' })
+      } else {
+        router.push('/sign-in?redirect_url=/create-post')
+      }
       return
     }
 
@@ -46,8 +99,10 @@ export default function CreatePostPage() {
         throw new Error(data.error || 'Failed to create post')
       }
 
+      // Clear draft after successful post creation
+      clearPostDraft()
       toast.success('Post created successfully')
-      router.push('/dashboard')
+      router.push('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
