@@ -657,9 +657,7 @@ function AuthenticatedFeed() {
                 )}
                 <div>
                   <h3 className="font-semibold">
-                    {activePost.author.firstName && activePost.author.lastName
-                      ? `${activePost.author.firstName} ${activePost.author.lastName}`
-                      : activePost.author.username}
+                    {activePost.author.username}
                   </h3>
                   <p className="text-sm text-muted-foreground">@{activePost.author.username}</p>
                 </div>

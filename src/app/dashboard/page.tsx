@@ -11,6 +11,7 @@ import { EditPostModal } from '@/components/EditPostModal'
 import { toast } from 'sonner'
 import { Heart, Bookmark, Share2, Eye, Edit3, User, Settings, Trash2, AlertTriangle } from 'lucide-react'
 import type { PostResponse } from '@/types/post'
+import Image from 'next/image'
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('posts')
@@ -25,6 +26,16 @@ export default function DashboardPage() {
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false)
   const [postToDelete, setPostToDelete] = useState<PostResponse | null>(null)
+  
+  // User profile state
+  const [userProfile, setUserProfile] = useState<{
+    id: string
+    username: string
+    firstName: string | null
+    lastName: string | null
+    imageUrl: string | null
+    email: string
+  } | null>(null)
   
   // Username editor state
   const [currentUsername, setCurrentUsername] = useState<string>('')
@@ -68,10 +79,11 @@ export default function DashboardPage() {
     async function loadData() {
       try {
         setLoading(true)
-        const [postsRes, bookmarksRes, userRes] = await Promise.all([
+        const [postsRes, bookmarksRes, userRes, profileRes] = await Promise.all([
           fetch('/api/posts?userOnly=true'),
           fetch('/api/user/bookmarks'),
-          fetch('/api/user/username/check')
+          fetch('/api/user/username/check'),
+          fetch('/api/user/profile')
         ])
         
         if (postsRes.ok) {
@@ -87,6 +99,11 @@ export default function DashboardPage() {
         if (userRes.ok) {
           const userData = await userRes.json()
           setCurrentUsername(userData.username || '')
+        }
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setUserProfile(profileData)
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -116,6 +133,13 @@ export default function DashboardPage() {
       setCurrentUsername(username)
       setEditingUsername(false)
       setUsername('')
+      
+      // Refresh user profile to get updated data
+      const profileRes = await fetch('/api/user/profile')
+      if (profileRes.ok) {
+        const profileData = await profileRes.json()
+        setUserProfile(profileData)
+      }
     } finally {
       setSaving(false)
     }
@@ -379,9 +403,47 @@ export default function DashboardPage() {
               </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
+                    {/* Full Name Display */}
                     <div className="space-y-4">
-                <div>
-                        <label className="text-sm font-medium">Current Username</label>
+                      <div>
+                        <label className="text-sm font-medium">Full Name</label>
+                        <div className="flex items-center gap-3 mt-2">
+                          {userProfile?.imageUrl ? (
+                            <Image
+                              src={userProfile.imageUrl}
+                              alt={userProfile.firstName || userProfile.username}
+                              width={48}
+                              height={48}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
+                              <span className="text-primary font-semibold text-lg">
+                                {userProfile?.firstName?.charAt(0) || userProfile?.username?.charAt(0) || 'U'}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="p-3 bg-muted rounded-md">
+                              <span className="font-medium">
+                                {userProfile?.firstName && userProfile?.lastName 
+                                  ? `${userProfile.firstName} ${userProfile.lastName}`
+                                  : userProfile?.firstName || 'Name not set'
+                                }
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              This is managed by your account provider
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Username Settings */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">Username</label>
                         <div className="flex items-center gap-3 mt-2">
                           <div className="flex-1 p-3 bg-muted rounded-md">
                             <span className="font-mono">{currentUsername || 'Not set'}</span>
@@ -393,7 +455,7 @@ export default function DashboardPage() {
                             </Button>
                           )}
                         </div>
-                </div>
+                      </div>
 
                       {editingUsername && (
                         <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
