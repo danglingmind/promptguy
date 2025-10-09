@@ -20,7 +20,10 @@ export async function POST(request: NextRequest) {
 
     const user = await ensureUserByClerkId(userId)
 
-    if (user.username && user.username.trim().length >= 5) {
+    // Check if user has a proper username (not the temporary one)
+    const isTemporaryUsername = user.username.startsWith('user_') && user.username.endsWith('_temp')
+    
+    if (!isTemporaryUsername && user.username && user.username.trim().length >= 5) {
       return bad('Username already set', 409)
     }
 

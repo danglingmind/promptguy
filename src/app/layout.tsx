@@ -6,6 +6,7 @@ import { Navbar } from '@/components/Navbar';
 import "./globals.css";
 import { BrandThemeLoader } from "@/components/BrandThemeLoader";
 import { Toaster } from 'sonner';
+import { FilterProvider } from '@/contexts/FilterContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,11 +41,13 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <Navbar />
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <Toaster richColors position="top-center" />
+            <FilterProvider>
+              <Navbar />
+              <main className="min-h-screen">
+                {children}
+              </main>
+              <Toaster richColors position="top-center" />
+            </FilterProvider>
           </ThemeProvider>
         </body>
       </html>

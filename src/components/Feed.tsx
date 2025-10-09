@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, memo, Suspense } from 'react'
+import { useFilters } from '@/contexts/FilterContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Heart, Bookmark, Share2, Eye, TrendingUp, Star, Clock, X, Copy } from 'lucide-react'
@@ -312,22 +313,22 @@ PostsSection.displayName = 'PostsSection'
 
 // Custom hook for posts data management
 const usePostsData = () => {
+  const { filterParams, applyFilter, applySearch } = useFilters()
   const [posts, setPosts] = useState<PostResponse[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [page, setPage] = useState<number>(1)
   const [hasMore, setHasMore] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
-  const [filterParams, setFilterParams] = useState<{ sortBy?: string; order?: string; purpose?: string; search?: string }>({})
 
 
-  const fetchPostsOnce = useCallback(async (signal?: AbortSignal, mode: 'append' | 'replace' = 'replace') => {
+  const fetchPostsOnce = useCallback(async (signal?: AbortSignal, mode: 'append' | 'replace' = 'replace', currentFilterParams = filterParams) => {
     const headers: Record<string, string> = {}
     const params = new URLSearchParams()
     params.set('page', String(mode === 'append' ? page + 1 : 1))
-    if (filterParams.sortBy) params.set('sortBy', filterParams.sortBy)
-    if (filterParams.order) params.set('order', filterParams.order)
-    if (filterParams.purpose) params.set('purpose', filterParams.purpose as string)
-    if (filterParams.search) params.set('search', filterParams.search as string)
+    if (currentFilterParams.sortBy) params.set('sortBy', currentFilterParams.sortBy)
+    if (currentFilterParams.order) params.set('order', currentFilterParams.order)
+    if (currentFilterParams.purpose) params.set('purpose', currentFilterParams.purpose as string)
+    if (currentFilterParams.search) params.set('search', currentFilterParams.search as string)
     const res = await fetch(`/api/posts?${params.toString()}`, { headers, signal })
     if (res.status === 304) return // no changes
     if (!res.ok) throw new Error('Failed to fetch posts')
@@ -340,13 +341,13 @@ const usePostsData = () => {
       setPosts(data.posts)
       setPage(1)
     }
-  }, [page, filterParams])
+  }, [page])
 
-  // Fetch posts from API with HTTP caching (ETag) and gentle polling
+  // Initial fetch only - no polling to avoid overriding filters
   useEffect(() => {
     let aborted = false
 
-    async function loop() {
+    async function initialFetch() {
       try {
         setLoading(true)
         await fetchPostsOnce()
@@ -354,27 +355,30 @@ const usePostsData = () => {
       } catch (err) {
         if (!aborted) setError(err instanceof Error ? err.message : 'Failed to fetch posts')
       }
-
-      // Gentle poll every 30s, visibility-aware
-      const tick = async () => {
-        if (document.visibilityState === 'visible') {
-          try { await fetchPostsOnce() } catch {}
-        }
-      }
-      const interval = setInterval(tick, 30000)
-      const onVis = () => { if (document.visibilityState === 'visible') tick() }
-      document.addEventListener('visibilitychange', onVis)
-
-      return () => {
-        clearInterval(interval)
-        document.removeEventListener('visibilitychange', onVis)
-      }
     }
 
-    const controller = new AbortController()
-    loop()
-    return () => { aborted = true; controller.abort() }
-  }, [fetchPostsOnce])
+    initialFetch()
+    return () => { aborted = true }
+  }, []) // Empty dependency array - only run once on mount
+
+  // Separate polling effect that respects current filters
+  useEffect(() => {
+    const tick = async () => {
+      if (document.visibilityState === 'visible' && !loading) {
+        try { 
+          await fetchPostsOnce(undefined, 'replace') 
+        } catch {}
+      }
+    }
+    const interval = setInterval(tick, 60000) // Poll every 60s
+    const onVis = () => { if (document.visibilityState === 'visible') tick() }
+    document.addEventListener('visibilitychange', onVis)
+    
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, []) // No dependencies - uses current filterParams from closure
 
   const loadMore = useCallback(async () => {
     try {
@@ -385,20 +389,35 @@ const usePostsData = () => {
     }
   }, [fetchPostsOnce])
 
-  const applyFilter = useCallback((newFilterParams: { sortBy?: string; order?: string; purpose?: string; search?: string }) => {
-    setFilterParams(newFilterParams)
-  }, [])
+  const handleApplyFilter = useCallback(async (newFilterParams: { sortBy?: string; order?: string; purpose?: string; search?: string }) => {
+    applyFilter(newFilterParams)
+    // Trigger immediate fetch with new filters
+    try {
+      setLoading(true)
+      await fetchPostsOnce(undefined, 'replace', newFilterParams)
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchPostsOnce, applyFilter])
 
-  const applySearch = useCallback((params: { search: string; model: string; purpose: string; sortBy: string; order: string }) => {
-    setFilterParams({
+  const handleApplySearch = useCallback(async (params: { search: string; model: string; purpose: string; sortBy: string; order: string }) => {
+    const newFilterParams = {
       search: params.search || undefined,
       purpose: params.purpose || undefined,
       sortBy: params.sortBy || undefined,
       order: params.order || undefined
-    })
-  }, [])
+    }
+    applySearch(params)
+    // Trigger immediate fetch with new filters
+    try {
+      setLoading(true)
+      await fetchPostsOnce(undefined, 'replace', newFilterParams)
+    } finally {
+      setLoading(false)
+    }
+  }, [fetchPostsOnce, applySearch])
 
-  return { posts, loading, hasMore, error, loadMore, applyFilter, applySearch }
+  return { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch }
 }
 
 function AuthenticatedFeed() {
@@ -406,8 +425,11 @@ function AuthenticatedFeed() {
   const [activePost, setActivePost] = useState<PostResponse | null>(null)
   const [activeFilters, setActiveFilters] = useState<Array<{ key: string; label: string }>>([])
   
+  // Get context values
+  const { filterParams, applyFilter, applySearch } = useFilters()
+  
   // Use custom hook for posts data - this isolates all filter logic
-  const { posts, loading, hasMore, error, loadMore, applyFilter, applySearch } = usePostsData()
+  const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch } = usePostsData()
 
   const handleLike = async (postId: string) => {
     try {
@@ -483,15 +505,32 @@ function AuthenticatedFeed() {
     fetch(`/api/posts/${post.id}/view`, { method: 'POST' }).catch(() => {})
   }, [])
 
-  const handleApplyFilter = useCallback((filterParams: { sortBy?: string; order?: string; purpose?: string; search?: string }, activeFilters: Array<{ key: string; label: string }>) => {
-    applyFilter(filterParams)
+  const handleApplyFilterCallback = useCallback((filterParams: { sortBy?: string; order?: string; purpose?: string; search?: string }, activeFilters: Array<{ key: string; label: string }>) => {
+    handleApplyFilter(filterParams)
     setActiveFilters(activeFilters)
-  }, [applyFilter])
+  }, [handleApplyFilter])
 
-  const handleRemoveFilter = useCallback((key: string) => {
+  const handleRemoveFilter = useCallback(async (key: string) => {
     setActiveFilters(prev => prev.filter(x => x.key !== key))
-    // Note: We don't need to update filterParams here as the hook manages it
-  }, [])
+    
+    // Clear the specific filter from context and refetch
+    const newFilterParams = { ...filterParams }
+    
+    // Remove the specific filter based on key
+    if (key === 'search') newFilterParams.search = undefined
+    if (key === 'purpose') newFilterParams.purpose = undefined
+    if (key === 'sort') {
+      newFilterParams.sortBy = undefined
+      newFilterParams.order = undefined
+    }
+    if (key === 'featured') {
+      newFilterParams.sortBy = undefined
+      newFilterParams.order = undefined
+    }
+    
+    // Apply the updated filters and refetch
+    applyFilter(newFilterParams)
+  }, [filterParams, applyFilter])
 
   const handleApplySort = useCallback((key: string) => {
     const strat = FEED_FILTERS[key as FeedFilterKey]
@@ -504,14 +543,14 @@ function AuthenticatedFeed() {
   }, [applyFilter])
 
   const handleSearch = useCallback((params: { search: string; model: string; purpose: string; sortBy: string; order: string }) => {
-    applySearch(params)
+    handleApplySearch(params)
     setActiveFilters((prev) => {
       const next = prev.filter(f => !['search','purpose'].includes(f.key))
       if (params.search) next.push({ key: 'search', label: params.search })
       if (params.purpose) next.push({ key: 'purpose', label: params.purpose })
       return next
     })
-  }, [applySearch])
+  }, [handleApplySearch])
 
 
   // Auto-open dialog when deep-linked via /?post=<id>
@@ -569,22 +608,24 @@ function AuthenticatedFeed() {
       <SearchSection onSearch={handleSearch} />
       
       {/* Featured Sections */}
-      <FeaturedSections onApplyFilter={handleApplyFilter} />
+      <FeaturedSections onApplyFilter={handleApplyFilterCallback} />
 
-      {/* Main Feed */}
-      <PostsSection
-        posts={posts}
-        loading={loading}
-        hasMore={hasMore}
-        onLoadMore={loadMore}
-        onPostClick={handlePostClick}
-        onLike={handleLike}
-        onBookmark={handleBookmark}
-        onShare={handleShare}
-        activeFilters={activeFilters}
-        onRemoveFilter={handleRemoveFilter}
-        onApplySort={handleApplySort}
-      />
+      {/* Main Feed - partial prerender target */}
+      <Suspense fallback={<div className="py-8 text-center text-muted-foreground">Loading posts…</div>}>
+        <PostsSection
+          posts={posts}
+          loading={loading}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          onPostClick={handlePostClick}
+          onLike={handleLike}
+          onBookmark={handleBookmark}
+          onShare={handleShare}
+          activeFilters={activeFilters}
+          onRemoveFilter={handleRemoveFilter}
+          onApplySort={handleApplySort}
+        />
+      </Suspense>
     {/* Post Dialog */}
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setOpen(false); setActivePost(null) } }}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
