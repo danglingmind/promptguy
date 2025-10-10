@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, memo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useFilters } from '@/contexts/FilterContext'
 import { Button } from '@/components/ui/button'
 import { Heart, Bookmark, Share2, Eye, X, Copy } from 'lucide-react'
@@ -253,6 +254,7 @@ function PublicFeed() {
   const [open, setOpen] = useState<boolean>(false)
   const [activePost, setActivePost] = useState<PostResponse | null>(null)
   const [activeFilters, setActiveFilters] = useState<Array<{ key: string; label: string }>>([])
+  const searchParams = useSearchParams()
   
   // Get context values
   const { filterParams: _authFilterParams, applyFilter: authApplyFilter, applySearch: authApplySearch } = useFilters()
@@ -327,6 +329,25 @@ function PublicFeed() {
     // Handle sort logic here
     console.log('Applying sort:', key)
   }, [])
+
+  // Handle post ID from URL to auto-open dialog
+  useEffect(() => {
+    const postId = searchParams.get('post')
+    if (postId && posts.length > 0) {
+      const post = posts.find(p => p.id === postId)
+      if (post) {
+        setActivePost(post)
+        setOpen(true)
+        // Track view for the post
+        fetch(`/api/posts/${post.id}/view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(error => {
+          console.error('Error tracking view:', error)
+        })
+      }
+    }
+  }, [searchParams, posts])
 
   if (loading && posts.length === 0) {
     return (
@@ -470,6 +491,7 @@ function AuthenticatedFeed() {
   const [open, setOpen] = useState<boolean>(false)
   const [activePost, setActivePost] = useState<PostResponse | null>(null)
   const [activeFilters, setActiveFilters] = useState<Array<{ key: string; label: string }>>([])
+  const searchParams = useSearchParams()
   
   // Get Clerk user state
   const { isLoaded } = useUser()
@@ -603,6 +625,25 @@ function AuthenticatedFeed() {
   }, [handleApplyFilter])
 
   // Sorting not implemented yet
+
+  // Handle post ID from URL to auto-open dialog
+  useEffect(() => {
+    const postId = searchParams.get('post')
+    if (postId && posts.length > 0) {
+      const post = posts.find(p => p.id === postId)
+      if (post) {
+        setActivePost(post)
+        setOpen(true)
+        // Track view for the post
+        fetch(`/api/posts/${post.id}/view`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(error => {
+          console.error('Error tracking view:', error)
+        })
+      }
+    }
+  }, [searchParams, posts])
 
   if (loading && posts.length === 0) {
     return (
