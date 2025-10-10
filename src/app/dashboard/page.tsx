@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { EditPostModal } from '@/components/EditPostModal'
 import { toast } from 'sonner'
-import { Heart, Bookmark, Share2, Eye, Edit3, User, Settings, Trash2, AlertTriangle } from 'lucide-react'
+import { Heart, Bookmark, Share2, Eye, Edit3, User, Settings, Trash2, AlertTriangle, Copy } from 'lucide-react'
 import type { PostResponse } from '@/types/post'
 import Image from 'next/image'
 
@@ -42,6 +42,10 @@ export default function DashboardPage() {
   // Delete confirmation state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false)
   const [postToDelete, setPostToDelete] = useState<PostResponse | null>(null)
+  
+  // Post dialog state
+  const [postDialogOpen, setPostDialogOpen] = useState<boolean>(false)
+  const [activePost, setActivePost] = useState<PostResponse | null>(null)
   
   // User profile state
   const [userProfile, setUserProfile] = useState<{
@@ -263,6 +267,15 @@ export default function DashboardPage() {
               } 
             : post
         ))
+        // Update active post if dialog is open
+        setActivePost(prev => prev && prev.id === postId 
+          ? { 
+              ...prev, 
+              likesCount: data.liked ? prev.likesCount + 1 : prev.likesCount - 1,
+              isLikedByCurrentUser: data.liked
+            } 
+          : prev
+        )
         // Update bookmarks list
         setBookmarks(prev => prev.map(bookmark => 
           bookmark.post.id === postId 
@@ -310,6 +323,15 @@ export default function DashboardPage() {
               } 
             : post
         ))
+        // Update active post if dialog is open
+        setActivePost(prev => prev && prev.id === postId 
+          ? { 
+              ...prev, 
+              bookmarksCount: data.bookmarked ? prev.bookmarksCount + 1 : prev.bookmarksCount - 1,
+              isBookmarkedByCurrentUser: data.bookmarked
+            } 
+          : prev
+        )
         // If unbookmarked, remove from bookmarks list
         if (!data.bookmarked) {
           setBookmarks(prev => prev.filter(bookmark => bookmark.post.id !== postId))
@@ -350,6 +372,47 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Error sharing post:', err)
       toast.error('Failed to copy link')
+    }
+  }
+
+  const handlePostClick = async (post: any) => {
+    // Convert bookmark post to PostResponse format
+    const postResponse: PostResponse = {
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      model: post.model,
+      purpose: post.purpose,
+      tags: post.tags,
+      isPublic: true, // Assume public for bookmarked posts
+      likesCount: post.likesCount,
+      bookmarksCount: post.bookmarksCount,
+      sharesCount: post.sharesCount,
+      viewsCount: post.viewsCount,
+      author: {
+        id: '',
+        username: 'Unknown',
+        firstName: null,
+        lastName: null,
+        imageUrl: null
+      },
+      createdAt: new Date().toISOString(),
+      isLikedByCurrentUser: post.isLikedByCurrentUser,
+      isBookmarkedByCurrentUser: post.isBookmarkedByCurrentUser
+    }
+    
+    setActivePost(postResponse)
+    setPostDialogOpen(true)
+    
+    // Track view for the post
+    try {
+      await fetch(`/api/posts/${post.id}/view`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+    } catch (error) {
+      console.error('Error tracking view:', error)
+      // Don't show error to user, just log it
     }
   }
 
@@ -513,7 +576,11 @@ export default function DashboardPage() {
                 ) : (
                   <div className="space-y-6">
                     {bookmarks.map((bookmark) => (
-                      <Card key={bookmark.id} className="p-6 hover:shadow-md transition-shadow">
+                      <Card 
+                        key={bookmark.id} 
+                        className="p-6 hover:shadow-md transition-shadow cursor-pointer"
+                        onClick={() => handlePostClick(bookmark.post)}
+                      >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                             <h3 className="font-semibold text-xl mb-3 break-words">{bookmark.post.title}</h3>
@@ -727,6 +794,91 @@ export default function DashboardPage() {
                 Delete Post
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Post Dialog */}
+        <Dialog open={postDialogOpen} onOpenChange={setPostDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+            {/* Fixed Header */}
+            <DialogHeader className="p-6 pb-4 border-b bg-background">
+              <DialogTitle className="text-lg font-semibold">
+                {activePost?.title}
+              </DialogTitle>
+              {activePost && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                  <span>By {activePost.author?.username || 'Anonymous'}</span>
+                  <span>•</span>
+                  <span>{activePost.createdAt ? new Date(activePost.createdAt).toLocaleDateString() : 'Recently'}</span>
+                </div>
+              )}
+            </DialogHeader>
+            
+            {/* Scrollable Content Area */}
+            {activePost && (
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="prose prose-sm max-w-none relative group">
+                  <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg relative">
+                    {activePost.content}
+                  </pre>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(activePost.content)
+                        toast.success('Content copied to clipboard!')
+                      } catch (err) {
+                        console.error('Error copying content:', err)
+                        toast.error('Failed to copy content')
+                      }
+                    }}
+                    className="absolute bottom-2 right-2 p-2 bg-background/80 hover:bg-background border border-border rounded-md shadow-sm hover:shadow-md transition-all duration-200 opacity-0 hover:opacity-100 group-hover:opacity-100"
+                    title="Copy content"
+                  >
+                    <Copy className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Fixed Footer */}
+            {activePost && (
+              <div className="p-6 pt-4 border-t bg-background">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      <span>{activePost.viewsCount || 0} views</span>
+                    </div>
+                    <button
+                      onClick={() => handleLike(activePost.id)}
+                      className="flex items-center gap-1 hover:text-red-500 transition-colors cursor-pointer"
+                      title="Like this post"
+                    >
+                      <Heart className={`h-4 w-4 ${activePost.isLikedByCurrentUser ? 'fill-red-500 text-red-500' : ''}`} />
+                      <span>{activePost.likesCount || 0}</span>
+                    </button>
+                    <button
+                      onClick={() => handleBookmark(activePost.id)}
+                      className="flex items-center gap-1 hover:text-yellow-500 transition-colors cursor-pointer"
+                      title="Bookmark this post"
+                    >
+                      <Bookmark className={`h-4 w-4 ${activePost.isBookmarkedByCurrentUser ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                      <span>{activePost.bookmarksCount || 0}</span>
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleShare(activePost.id)}
+                      className="p-2 hover:bg-muted rounded-md transition-colors cursor-pointer"
+                      title="Share this post"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
