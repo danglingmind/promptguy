@@ -43,24 +43,23 @@ export async function POST(request: NextRequest) {
       }
 
       const email = data.email_addresses?.[0]?.email_address || ''
-      const username = data.username || `user_${data.id.slice(-8)}`
 
       await prisma.user.upsert({
         where: { clerkId: data.id },
         create: {
           clerkId: data.id,
           email,
-          username,
+          username: `user_${data.id.slice(0, 8)}_temp`, // Use temporary username for new users
           firstName: data.first_name,
           lastName: data.last_name,
           imageUrl: data.image_url
         },
         update: {
           email,
-          username,
           firstName: data.first_name,
           lastName: data.last_name,
           imageUrl: data.image_url
+          // Don't update username in webhook - let user set it manually
         }
       })
     }

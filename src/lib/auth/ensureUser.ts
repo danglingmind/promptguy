@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db'
+import { clerkClient } from '@clerk/nextjs/server'
 
 /**
  * Ensure the application-level user exists for a given Clerk user id.
@@ -6,14 +7,33 @@ import { prisma } from '@/lib/db'
 export async function ensureUserByClerkId(clerkId: string) {
   const existing = await prisma.user.findUnique({ where: { clerkId } })
   if (existing) return existing
-  // If not found, create a minimal record. Other fields can be filled later.
-  return prisma.user.create({
-    data: {
-      clerkId,
-      email: `${clerkId}@placeholder.local`,
-      username: `user_${clerkId.slice(0, 8)}_temp`,
-    }
-  })
+  
+  // If not found, fetch user data from Clerk and create the record
+  try {
+    const clerk = await clerkClient()
+    const clerkUser = await clerk.users.getUser(clerkId)
+    
+    return prisma.user.create({
+      data: {
+        clerkId,
+        email: clerkUser.emailAddresses[0]?.emailAddress || `${clerkId}@placeholder.local`,
+        username: `user_${clerkId.slice(0, 8)}_temp`,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        imageUrl: clerkUser.imageUrl
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching user from Clerk:', error)
+    // Fallback to minimal record if Clerk fetch fails
+    return prisma.user.create({
+      data: {
+        clerkId,
+        email: `${clerkId}@placeholder.local`,
+        username: `user_${clerkId.slice(0, 8)}_temp`,
+      }
+    })
+  }
 }
 
 export const RESERVED_USERNAMES = new Set([
