@@ -22,12 +22,12 @@ export function UsernameCheck({ children }: UsernameCheckProps) {
         }
         if (res.ok) {
           const data = await res.json()
-          if (!data.hasUsername) {
-            // No username set, redirect to create
+          if (data.authenticated && !data.hasUsername) {
+            // Authenticated user without username, redirect to create
             router.push('/create')
             return
           }
-          // Username exists, show content
+          // Show content for unauthenticated users or authenticated users with usernames
           setChecking(false)
         }
       } catch {

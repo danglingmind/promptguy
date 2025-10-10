@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { UserButton, SignInButton, SignedIn, SignedOut } from '@clerk/nextjs'
+import { UserButton, SignInButton, SignedIn, SignedOut, useClerk } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Plus, Menu, X } from 'lucide-react'
 import { Logo } from '@/components/Logo'
@@ -10,6 +10,7 @@ import Link from 'next/link'
 
 export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { openSignIn } = useClerk()
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -36,9 +37,19 @@ export function Navbar() {
           <Link href="/dashboard" className="px-3 py-2 rounded-md text-sm hover:bg-muted">
             Dashboard
           </Link>
-          <Link href="/create-post" className="mr-4 px-2 py-2 rounded-full text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center">
-            <Plus className="h-4 w-4" />
-          </Link>
+          <SignedIn>
+            <Link href="/create-post" className="mr-4 px-2 py-2 rounded-full text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center">
+              <Plus className="h-4 w-4" />
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <button 
+              onClick={() => openSignIn({ redirectUrl: '/create-post' })}
+              className="mr-4 px-2 py-2 rounded-full text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </SignedOut>
           <SignedIn>
             <UserButton afterSignOutUrl="/" />
           </SignedIn>
@@ -92,13 +103,26 @@ export function Navbar() {
                   Dashboard
                 </Link>
                 
-                <Link 
-                  href="/create-post" 
-                  className="block px-3 py-3 rounded-md text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center"
-                  onClick={closeMobileMenu}
-                >
-                  <Plus className="h-4 w-4 mr-2" /> Create Post
-                </Link>
+                <SignedIn>
+                  <Link 
+                    href="/create-post" 
+                    className="block px-3 py-3 rounded-md text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center"
+                    onClick={closeMobileMenu}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Create Post
+                  </Link>
+                </SignedIn>
+                <SignedOut>
+                  <button 
+                    onClick={() => {
+                      closeMobileMenu()
+                      openSignIn({ redirectUrl: '/create-post' })
+                    }}
+                    className="block w-full px-3 py-3 rounded-md text-sm bg-primary text-primary-foreground hover:opacity-90 flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Create Post
+                  </button>
+                </SignedOut>
               </div>
 
               {/* Mobile Auth Section */}
