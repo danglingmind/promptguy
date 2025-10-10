@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Heart, Bookmark, Share2, Eye, TrendingUp, Star, Clock, X, Copy } from 'lucide-react'
+import { Heart, Bookmark, Share2, Eye, Clock, X, Copy } from 'lucide-react'
 import type { PostResponse } from '@/types/post'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
@@ -107,17 +107,6 @@ export const PostsList = memo(({
                       <span>Share</span>
                     </button>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <TrendingUp className="h-3 w-3" />
-                      <span>{post.viewsCount || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Star className="h-3 w-3" />
-                      <span>{post.likesCount || 0}</span>
-                    </div>
-                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between pt-2 border-t border-border/50">
@@ -131,15 +120,13 @@ export const PostsList = memo(({
                         className="rounded-full"
                       />
                     )}
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs md:text-sm font-medium">
-                        {post.author?.username || 'Anonymous'}
-                      </span>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{post.createdAt ? new Date(post.createdAt).toISOString().split('T')[0] : 'Recently'}</span>
-                      </div>
-                    </div>
+                    <span className="text-xs md:text-sm font-medium">
+                      {post.author?.username || 'Anonymous'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>{post.createdAt ? new Date(post.createdAt).toISOString().split('T')[0] : 'Recently'}</span>
                   </div>
                 </div>
               </div>
