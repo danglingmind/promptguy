@@ -8,7 +8,7 @@ import { SearchAndFilter } from '@/components/SearchAndFilter'
 import type { PostResponse, ListPostsResponse } from '@/types/post'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FEED_FILTERS, type FeedFilterKey } from '@/lib/filters/feed-filters'
-import { SignedIn, SignedOut } from '@clerk/nextjs'
+import { SignedIn, SignedOut, useUser } from '@clerk/nextjs'
 import { LandingPage } from '@/components/LandingPage'
 import { PostsList } from '@/components/PostsList'
 import Image from 'next/image'
@@ -144,7 +144,7 @@ const PostsSection = memo(({
 PostsSection.displayName = 'PostsSection'
 
 // Custom hook for posts data management
-const usePostsData = () => {
+const usePostsData = (isLoaded?: boolean) => {
   const { filterParams, applyFilter, applySearch } = useFilters()
   const [posts, setPosts] = useState<PostResponse[]>([])
   const [loading, setLoading] = useState<boolean>(true)
@@ -188,16 +188,15 @@ const usePostsData = () => {
       }
     }
 
-    // Add a small delay to ensure authentication is ready
-    const timeoutId = setTimeout(() => {
+    // Only fetch if authentication is loaded (for authenticated users) or immediately (for public users)
+    if (isLoaded === undefined || isLoaded) {
       initialFetch()
-    }, 100)
+    }
 
     return () => { 
       aborted = true
-      clearTimeout(timeoutId)
     }
-  }, []) // Empty dependency array - only run once on mount
+  }, [isLoaded]) // Depend on isLoaded to ensure authentication is ready
 
   // Separate polling effect that respects current filters
   useEffect(() => {
@@ -480,11 +479,28 @@ function AuthenticatedFeed() {
   const [activePost, setActivePost] = useState<PostResponse | null>(null)
   const [activeFilters, setActiveFilters] = useState<Array<{ key: string; label: string }>>([])
   
+  // Get Clerk user state
+  const { isLoaded } = useUser()
+  
   // Get context values
   const { filterParams, applyFilter, applySearch } = useFilters()
   
   // Use custom hook for posts data - this isolates all filter logic
-  const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch, updatePostInList } = usePostsData()
+  const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch, updatePostInList } = usePostsData(isLoaded)
+
+  // Show loading while authentication is being loaded
+  if (!isLoaded) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handlePostClick = useCallback(async (post: PostResponse) => {
     setActivePost(post)
