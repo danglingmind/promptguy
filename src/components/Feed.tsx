@@ -376,67 +376,82 @@ function PublicFeed() {
       
       {/* Post Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+          {/* Fixed Header */}
+          <DialogHeader className="p-6 pb-4 border-b bg-background">
             <DialogTitle className="text-lg font-semibold">
               {activePost?.title}
             </DialogTitle>
-          </DialogHeader>
-          {activePost && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {activePost && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
                 <span>By {activePost.author?.username || 'Anonymous'}</span>
                 <span>•</span>
                 <span>{activePost.createdAt ? new Date(activePost.createdAt).toLocaleDateString() : 'Recently'}</span>
               </div>
-              
-              <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg">
+            )}
+          </DialogHeader>
+          
+          {/* Scrollable Content Area */}
+          {activePost && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="prose prose-sm max-w-none relative group">
+                <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg relative">
                   {activePost.content}
                 </pre>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(activePost.content)
+                      toast.success('Content copied to clipboard!')
+                    } catch (err) {
+                      console.error('Error copying content:', err)
+                      toast.error('Failed to copy content')
+                    }
+                  }}
+                  className="absolute bottom-2 right-2 p-2 bg-background/80 hover:bg-background border border-border rounded-md shadow-sm hover:shadow-md transition-all duration-200 opacity-0 hover:opacity-100 group-hover:opacity-100"
+                  title="Copy content"
+                >
+                  <Copy className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                </button>
               </div>
-              
-              <div className="flex items-center justify-between pt-4 border-t">
+            </div>
+          )}
+          
+          {/* Fixed Footer */}
+          {activePost && (
+            <div className="p-6 pt-4 border-t bg-background">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Eye className="h-4 w-4" />
                     <span>{activePost.viewsCount || 0} views</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Heart className="h-4 w-4" />
-                    <span>{activePost.likesCount || 0} likes</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Bookmark className="h-4 w-4" />
-                    <span>{activePost.bookmarksCount || 0} bookmarks</span>
-                  </div>
+                  <button
+                    onClick={() => handleLike(activePost.id)}
+                    className="flex items-center gap-1 hover:text-red-500 transition-colors cursor-pointer"
+                    title="Like this post"
+                  >
+                    <Heart className={`h-4 w-4 ${activePost.isLikedByCurrentUser ? 'fill-red-500 text-red-500' : ''}`} />
+                    <span>{activePost.likesCount || 0}</span>
+                  </button>
+                  <button
+                    onClick={() => handleBookmark(activePost.id)}
+                    className="flex items-center gap-1 hover:text-yellow-500 transition-colors cursor-pointer"
+                    title="Bookmark this post"
+                  >
+                    <Bookmark className={`h-4 w-4 ${activePost.isBookmarkedByCurrentUser ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                    <span>{activePost.bookmarksCount || 0}</span>
+                  </button>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleLike(activePost.id)}
-                  >
-                    <Heart className="h-4 w-4 mr-1" />
-                    Like
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBookmark(activePost.id)}
-                  >
-                    <Bookmark className="h-4 w-4 mr-1" />
-                    Bookmark
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
                     onClick={() => handleShare(activePost.id)}
+                    className="p-2 hover:bg-muted rounded-md transition-colors cursor-pointer"
+                    title="Share this post"
                   >
-                    <Share2 className="h-4 w-4 mr-1" />
-                    Share
-                  </Button>
+                    <Share2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -617,67 +632,82 @@ function AuthenticatedFeed() {
       
       {/* Post Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
+          {/* Fixed Header */}
+          <DialogHeader className="p-6 pb-4 border-b bg-background">
             <DialogTitle className="text-lg font-semibold">
               {activePost?.title}
             </DialogTitle>
-          </DialogHeader>
-          {activePost && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {activePost && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
                 <span>By {activePost.author?.username || 'Anonymous'}</span>
                 <span>•</span>
                 <span>{activePost.createdAt ? new Date(activePost.createdAt).toLocaleDateString() : 'Recently'}</span>
               </div>
-              
-              <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg">
+            )}
+          </DialogHeader>
+          
+          {/* Scrollable Content Area */}
+          {activePost && (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="prose prose-sm max-w-none relative group">
+                <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg relative">
                   {activePost.content}
                 </pre>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(activePost.content)
+                      toast.success('Content copied to clipboard!')
+                    } catch (err) {
+                      console.error('Error copying content:', err)
+                      toast.error('Failed to copy content')
+                    }
+                  }}
+                  className="absolute bottom-2 right-2 p-2 bg-background/80 hover:bg-background border border-border rounded-md shadow-sm hover:shadow-md transition-all duration-200 opacity-0 hover:opacity-100 group-hover:opacity-100"
+                  title="Copy content"
+                >
+                  <Copy className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                </button>
               </div>
-              
-              <div className="flex items-center justify-between pt-4 border-t">
+            </div>
+          )}
+          
+          {/* Fixed Footer */}
+          {activePost && (
+            <div className="p-6 pt-4 border-t bg-background">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Eye className="h-4 w-4" />
                     <span>{activePost.viewsCount || 0} views</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Heart className="h-4 w-4" />
-                    <span>{activePost.likesCount || 0} likes</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Bookmark className="h-4 w-4" />
-                    <span>{activePost.bookmarksCount || 0} bookmarks</span>
-                  </div>
+                  <button
+                    onClick={() => handleLike(activePost.id)}
+                    className="flex items-center gap-1 hover:text-red-500 transition-colors cursor-pointer"
+                    title="Like this post"
+                  >
+                    <Heart className={`h-4 w-4 ${activePost.isLikedByCurrentUser ? 'fill-red-500 text-red-500' : ''}`} />
+                    <span>{activePost.likesCount || 0}</span>
+                  </button>
+                  <button
+                    onClick={() => handleBookmark(activePost.id)}
+                    className="flex items-center gap-1 hover:text-yellow-500 transition-colors cursor-pointer"
+                    title="Bookmark this post"
+                  >
+                    <Bookmark className={`h-4 w-4 ${activePost.isBookmarkedByCurrentUser ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                    <span>{activePost.bookmarksCount || 0}</span>
+                  </button>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleLike(activePost.id)}
-                  >
-                    <Heart className="h-4 w-4 mr-1" />
-                    Like
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleBookmark(activePost.id)}
-                  >
-                    <Bookmark className="h-4 w-4 mr-1" />
-                    Bookmark
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
                     onClick={() => handleShare(activePost.id)}
+                    className="p-2 hover:bg-muted rounded-md transition-colors cursor-pointer"
+                    title="Share this post"
                   >
-                    <Share2 className="h-4 w-4 mr-1" />
-                    Share
-                  </Button>
+                    <Share2 className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
