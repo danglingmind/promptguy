@@ -3,15 +3,13 @@
 import { useState, useEffect, useCallback, memo, Suspense } from 'react'
 import { useFilters } from '@/contexts/FilterContext'
 import { Button } from '@/components/ui/button'
-import { Heart, Bookmark, Share2, Eye, TrendingUp, Star, Clock, X, Copy } from 'lucide-react'
+import { Heart, Bookmark, Share2, Eye, X, Copy } from 'lucide-react'
 import { SearchAndFilter } from '@/components/SearchAndFilter'
 import type { PostResponse, ListPostsResponse } from '@/types/post'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FEED_FILTERS, type FeedFilterKey } from '@/lib/filters/feed-filters'
 import { SignedIn, SignedOut, useUser } from '@clerk/nextjs'
-import { LandingPage } from '@/components/LandingPage'
 import { PostsList } from '@/components/PostsList'
-import Image from 'next/image'
 import { toast } from 'sonner'
 
 export function Feed() {
@@ -60,12 +58,10 @@ FeaturedSections.displayName = 'FeaturedSections'
 // Filter controls component
 const FilterControls = ({ 
   activeFilters, 
-  onRemoveFilter, 
-  onApplySort 
+  onRemoveFilter
 }: { 
   activeFilters: Array<{ key: string; label: string }>
   onRemoveFilter: (key: string) => void
-  onApplySort: (key: string) => void
 }) => {
   if (activeFilters.length === 0) return null
 
@@ -104,8 +100,7 @@ const PostsSection = memo(({
   onBookmark, 
   onShare,
   activeFilters,
-  onRemoveFilter,
-  onApplySort
+  onRemoveFilter
 }: {
   posts: PostResponse[]
   loading: boolean
@@ -117,14 +112,12 @@ const PostsSection = memo(({
   onShare: (postId: string) => void
   activeFilters: Array<{ key: string; label: string }>
   onRemoveFilter: (key: string) => void
-  onApplySort: (key: string) => void
 }) => {
   return (
     <div className="space-y-4 md:space-y-6">
       <FilterControls 
         activeFilters={activeFilters}
         onRemoveFilter={onRemoveFilter}
-        onApplySort={onApplySort}
       />
 
       <PostsList
@@ -145,14 +138,14 @@ PostsSection.displayName = 'PostsSection'
 
 // Custom hook for posts data management
 const usePostsData = (isLoaded?: boolean) => {
-  const { filterParams, applyFilter, applySearch } = useFilters()
+  const { filterParams: _publicFilterParams, applyFilter, applySearch } = useFilters()
   const [posts, setPosts] = useState<PostResponse[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [page, setPage] = useState<number>(1)
   const [hasMore, setHasMore] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
 
-  const fetchPostsOnce = useCallback(async (signal?: AbortSignal, mode: 'append' | 'replace' = 'replace', currentFilterParams = filterParams) => {
+  const fetchPostsOnce = useCallback(async (signal?: AbortSignal, mode: 'append' | 'replace' = 'replace', currentFilterParams = _publicFilterParams) => {
     const headers: Record<string, string> = {}
     const params = new URLSearchParams()
     params.set('page', String(mode === 'append' ? page + 1 : 1))
@@ -172,7 +165,7 @@ const usePostsData = (isLoaded?: boolean) => {
       setPosts(data.posts)
       setPage(1)
     }
-  }, [page])
+  }, [page, _publicFilterParams])
 
   // Initial fetch only - no polling to avoid overriding filters
   useEffect(() => {
@@ -190,21 +183,21 @@ const usePostsData = (isLoaded?: boolean) => {
 
     // Only fetch if authentication is loaded (for authenticated users) or immediately (for public users)
     if (isLoaded === undefined || isLoaded) {
-      initialFetch()
+    initialFetch()
     }
 
     return () => { 
       aborted = true
     }
-  }, [isLoaded]) // Depend on isLoaded to ensure authentication is ready
+  }, [isLoaded, fetchPostsOnce]) // Depend on isLoaded and fetcher
 
   // Separate polling effect that respects current filters
   useEffect(() => {
     if (loading) return
 
     const interval = setInterval(async () => {
-      try {
-        await fetchPostsOnce(undefined, 'replace')
+        try { 
+          await fetchPostsOnce(undefined, 'replace') 
       } catch (err) {
         console.error('Polling error:', err)
       }
@@ -262,7 +255,7 @@ function PublicFeed() {
   const [activeFilters, setActiveFilters] = useState<Array<{ key: string; label: string }>>([])
   
   // Get context values
-  const { filterParams, applyFilter, applySearch } = useFilters()
+  const { filterParams: _authFilterParams, applyFilter: authApplyFilter, applySearch: authApplySearch } = useFilters()
   
   // Use custom hook for posts data - this isolates all filter logic
   const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch, updatePostInList } = usePostsData()
@@ -283,12 +276,12 @@ function PublicFeed() {
     }
   }, [])
 
-  const handleLike = async (postId: string) => {
+  const handleLike = async (_postId: string) => {
     // For public users, show a message to sign in
     toast.info('Please sign in to like posts')
   }
 
-  const handleBookmark = async (postId: string) => {
+  const handleBookmark = async (_postId: string) => {
     // For public users, show a message to sign in
     toast.info('Please sign in to bookmark posts')
   }
@@ -382,7 +375,6 @@ function PublicFeed() {
           onShare={handleShare}
           activeFilters={activeFilters}
           onRemoveFilter={handleRemoveFilter}
-          onApplySort={handleApplySort}
         />
       </Suspense>
       
@@ -489,18 +481,7 @@ function AuthenticatedFeed() {
   const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch, updatePostInList } = usePostsData(isLoaded)
 
   // Show loading while authentication is being loaded
-  if (!isLoaded) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Do not early-return here to avoid conditional hooks; initial fetch waits for isLoaded
 
   const handlePostClick = useCallback(async (post: PostResponse) => {
     setActivePost(post)
@@ -587,7 +568,7 @@ function AuthenticatedFeed() {
   const handleShare = useCallback(async (postId: string) => {
     try {
       const url = `${window.location.origin}/posts/${postId}`
-      await navigator.clipboard.writeText(url)
+        await navigator.clipboard.writeText(url)
       toast.success('Link copied to clipboard!')
     } catch (err) {
       console.error('Error sharing post:', err)
@@ -621,10 +602,7 @@ function AuthenticatedFeed() {
     }
   }, [handleApplyFilter])
 
-  const handleApplySort = useCallback((key: string) => {
-    // Handle sort logic here
-    console.log('Applying sort:', key)
-  }, [])
+  // Sorting not implemented yet
 
   if (loading && posts.length === 0) {
     return (
@@ -673,11 +651,10 @@ function AuthenticatedFeed() {
           onShare={handleShare}
           activeFilters={activeFilters}
           onRemoveFilter={handleRemoveFilter}
-          onApplySort={handleApplySort}
         />
       </Suspense>
       
-      {/* Post Dialog */}
+    {/* Post Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col p-0">
           {/* Fixed Header */}
@@ -685,7 +662,7 @@ function AuthenticatedFeed() {
             <DialogTitle className="text-lg font-semibold">
               {activePost?.title}
             </DialogTitle>
-            {activePost && (
+        {activePost && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
                 <span>By {activePost.author?.username || 'Anonymous'}</span>
                 <span>•</span>
@@ -702,7 +679,7 @@ function AuthenticatedFeed() {
                   {activePost.content}
                 </pre>
                 <button
-                  onClick={async () => {
+                onClick={async () => {
                     try {
                       await navigator.clipboard.writeText(activePost.content)
                       toast.success('Content copied to clipboard!')
@@ -716,7 +693,7 @@ function AuthenticatedFeed() {
                 >
                   <Copy className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                 </button>
-              </div>
+            </div>
             </div>
           )}
           
@@ -728,7 +705,7 @@ function AuthenticatedFeed() {
                   <div className="flex items-center gap-1">
                     <Eye className="h-4 w-4" />
                     <span>{activePost.viewsCount || 0} views</span>
-                  </div>
+                </div>
                   <button
                     onClick={() => handleLike(activePost.id)}
                     className="flex items-center gap-1 hover:text-red-500 transition-colors cursor-pointer"
@@ -756,11 +733,11 @@ function AuthenticatedFeed() {
                     <Share2 className="h-4 w-4" />
                   </button>
                 </div>
-              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
     </div>
   )
 }

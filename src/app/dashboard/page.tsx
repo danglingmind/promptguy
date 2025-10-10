@@ -375,7 +375,25 @@ export default function DashboardPage() {
     }
   }
 
-  const handlePostClick = async (post: any) => {
+  type DashboardBookmarkPost = {
+    id: string
+    title: string
+    content: string
+    model: string
+    purpose: string
+    tags: string[]
+    likesCount: number
+    bookmarksCount: number
+    sharesCount: number
+    viewsCount: number
+    isLikedByCurrentUser?: boolean
+    isBookmarkedByCurrentUser?: boolean
+    author?: { id?: string; username?: string | null; firstName?: string | null; lastName?: string | null; imageUrl?: string | null }
+    createdAt?: string
+    isPublic?: boolean
+  }
+
+  const handlePostClick = async (post: DashboardBookmarkPost) => {
     // Convert bookmark post to PostResponse format
     const postResponse: PostResponse = {
       id: post.id,
@@ -384,19 +402,19 @@ export default function DashboardPage() {
       model: post.model,
       purpose: post.purpose,
       tags: post.tags,
-      isPublic: true, // Assume public for bookmarked posts
+      isPublic: post.isPublic ?? true,
       likesCount: post.likesCount,
       bookmarksCount: post.bookmarksCount,
       sharesCount: post.sharesCount,
       viewsCount: post.viewsCount,
       author: {
-        id: '',
-        username: 'Unknown',
-        firstName: null,
-        lastName: null,
-        imageUrl: null
+        id: post.author?.id ?? '',
+        username: post.author?.username ?? 'Unknown',
+        firstName: post.author?.firstName ?? null,
+        lastName: post.author?.lastName ?? null,
+        imageUrl: post.author?.imageUrl ?? null
       },
-      createdAt: new Date().toISOString(),
+      createdAt: post.createdAt ?? new Date().toISOString(),
       isLikedByCurrentUser: post.isLikedByCurrentUser,
       isBookmarkedByCurrentUser: post.isBookmarkedByCurrentUser
     }

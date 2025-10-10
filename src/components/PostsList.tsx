@@ -3,11 +3,11 @@
 import { memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Heart, Bookmark, Share2, Eye, Clock, X, Copy } from 'lucide-react'
+import { Heart, Bookmark, Share2, Eye, Clock } from 'lucide-react'
 import type { PostResponse } from '@/types/post'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
-import { toast } from 'sonner'
+
 
 interface PostsListProps {
   posts: PostResponse[]
@@ -111,9 +111,9 @@ export const PostsList = memo(({
                 
                 <div className="flex items-center justify-between pt-2 border-t border-border/50">
                   <div className="flex items-center gap-2">
-                    {post.author?.profileImageUrl && (
+                    {post.author?.imageUrl && (
                       <Image
-                        src={post.author.profileImageUrl}
+                        src={post.author.imageUrl}
                         alt={post.author.username || 'User'}
                         width={24}
                         height={24}
