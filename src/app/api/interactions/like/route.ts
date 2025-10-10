@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Please sign in to like posts' }, { status: 401 })
     }
 
     const { postId } = (await request.json()) as ToggleLikeRequestBody

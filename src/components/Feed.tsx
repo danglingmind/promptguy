@@ -507,9 +507,17 @@ function AuthenticatedFeed() {
             } 
           : prev
         )
+      } else {
+        const errorData = await response.json()
+        if (response.status === 401) {
+          toast.info(errorData.error || 'Please sign in to like posts')
+        } else {
+          toast.error('Failed to like post')
+        }
       }
     } catch (err) {
       console.error('Error liking post:', err)
+      toast.error('Failed to like post')
     }
   }
 
@@ -531,9 +539,17 @@ function AuthenticatedFeed() {
             } 
           : prev
         )
+      } else {
+        const errorData = await response.json()
+        if (response.status === 401) {
+          toast.info(errorData.error || 'Please sign in to bookmark posts')
+        } else {
+          toast.error('Failed to bookmark post')
+        }
       }
     } catch (err) {
       console.error('Error bookmarking post:', err)
+      toast.error('Failed to bookmark post')
     }
   }
 
