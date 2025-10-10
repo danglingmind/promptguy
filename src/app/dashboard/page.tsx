@@ -16,7 +16,23 @@ import Image from 'next/image'
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState('posts')
   const [posts, setPosts] = useState<PostResponse[]>([])
-  const [bookmarks, setBookmarks] = useState([])
+  const [bookmarks, setBookmarks] = useState<Array<{
+    id: string
+    post: {
+      id: string
+      title: string
+      content: string
+      model: string
+      purpose: string
+      tags: string[]
+      likesCount: number
+      bookmarksCount: number
+      sharesCount: number
+      viewsCount: number
+      isLikedByCurrentUser?: boolean
+      isBookmarkedByCurrentUser?: boolean
+    }
+  }>>([])
   const [loading, setLoading] = useState(true)
   
   // Edit modal state
@@ -113,6 +129,24 @@ export default function DashboardPage() {
     }
 
     loadData()
+
+    // Refetch data when window gains focus or becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData()
+      }
+    }
+
+    const handleFocus = () => {
+      loadData()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   async function handleSaveUsername() {
@@ -209,6 +243,116 @@ export default function DashboardPage() {
     setPostToDelete(null)
   }
 
+  const handleLike = async (postId: string) => {
+    try {
+      const response = await fetch('/api/interactions/like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        // Update posts list
+        setPosts(prev => prev.map(post => 
+          post.id === postId 
+            ? { 
+                ...post, 
+                likesCount: data.liked ? post.likesCount + 1 : post.likesCount - 1,
+                isLikedByCurrentUser: data.liked
+              } 
+            : post
+        ))
+        // Update bookmarks list
+        setBookmarks(prev => prev.map(bookmark => 
+          bookmark.post.id === postId 
+            ? { 
+                ...bookmark, 
+                post: {
+                  ...bookmark.post,
+                  likesCount: data.liked ? bookmark.post.likesCount + 1 : bookmark.post.likesCount - 1,
+                  isLikedByCurrentUser: data.liked
+                }
+              } 
+            : bookmark
+        ))
+      } else {
+        const errorData = await response.json()
+        if (response.status === 401) {
+          toast.info(errorData.error || 'Please sign in to like posts')
+        } else {
+          toast.error('Failed to like post')
+        }
+      }
+    } catch (err) {
+      console.error('Error liking post:', err)
+      toast.error('Failed to like post')
+    }
+  }
+
+  const handleBookmark = async (postId: string) => {
+    try {
+      const response = await fetch('/api/interactions/bookmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        // Update posts list
+        setPosts(prev => prev.map(post => 
+          post.id === postId 
+            ? { 
+                ...post, 
+                bookmarksCount: data.bookmarked ? post.bookmarksCount + 1 : post.bookmarksCount - 1,
+                isBookmarkedByCurrentUser: data.bookmarked
+              } 
+            : post
+        ))
+        // If unbookmarked, remove from bookmarks list
+        if (!data.bookmarked) {
+          setBookmarks(prev => prev.filter(bookmark => bookmark.post.id !== postId))
+        } else {
+          // Update bookmarks list
+          setBookmarks(prev => prev.map(bookmark => 
+            bookmark.post.id === postId 
+              ? { 
+                  ...bookmark, 
+                  post: {
+                    ...bookmark.post,
+                    bookmarksCount: bookmark.post.bookmarksCount + 1,
+                    isBookmarkedByCurrentUser: data.bookmarked
+                  }
+                } 
+              : bookmark
+          ))
+        }
+      } else {
+        const errorData = await response.json()
+        if (response.status === 401) {
+          toast.info(errorData.error || 'Please sign in to bookmark posts')
+        } else {
+          toast.error('Failed to bookmark post')
+        }
+      }
+    } catch (err) {
+      console.error('Error bookmarking post:', err)
+      toast.error('Failed to bookmark post')
+    }
+  }
+
+  const handleShare = async (postId: string) => {
+    try {
+      const url = `${window.location.origin}/posts/${postId}`
+      await navigator.clipboard.writeText(url)
+      toast.success('Link copied to clipboard!')
+    } catch (err) {
+      console.error('Error sharing post:', err)
+      toast.error('Failed to copy link')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -277,21 +421,44 @@ export default function DashboardPage() {
                                 <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>
                               ))}
                       </div>
-                            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                                <span>{post.likesCount}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Bookmark className="h-4 w-4" />
-                                <span>{post.bookmarksCount}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Share2 className="h-4 w-4" />
-                                <span>{post.sharesCount}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-4 w-4" />
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleLike(post.id)
+                                  }}
+                                  className="flex items-center gap-1 hover:text-red-500 transition-colors cursor-pointer"
+                                  title="Like this post"
+                                >
+                                  <Heart className={`h-4 w-4 ${post.isLikedByCurrentUser ? 'fill-red-500 text-red-500' : ''}`} />
+                                  <span>{post.likesCount}</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleBookmark(post.id)
+                                  }}
+                                  className="flex items-center gap-1 hover:text-yellow-500 transition-colors cursor-pointer"
+                                  title="Bookmark this post"
+                                >
+                                  <Bookmark className={`h-4 w-4 ${post.isBookmarkedByCurrentUser ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                                  <span>{post.bookmarksCount}</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleShare(post.id)
+                                  }}
+                                  className="flex items-center gap-1 hover:text-blue-500 transition-colors cursor-pointer"
+                                  title="Share this post"
+                                >
+                                  <Share2 className="h-4 w-4" />
+                                  <span>Share</span>
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Eye className="h-4 w-4" />
                                 <span>{post.viewsCount}</span>
                               </div>
                             </div>
@@ -345,7 +512,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {bookmarks.map((bookmark: { id: string; post: { id: string; title: string; content: string; model: string; purpose: string; tags: string[]; likesCount: number; bookmarksCount: number; sharesCount: number; viewsCount: number } }) => (
+                    {bookmarks.map((bookmark) => (
                       <Card key={bookmark.id} className="p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -364,20 +531,43 @@ export default function DashboardPage() {
                                 <Badge key={tag} variant="outline" className="text-xs">#{tag}</Badge>
                               ))}
                       </div>
-                            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4" />
-                                <span>{bookmark.post.likesCount}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Bookmark className="h-4 w-4" />
-                                <span>{bookmark.post.bookmarksCount}</span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleLike(bookmark.post.id)
+                                  }}
+                                  className="flex items-center gap-1 hover:text-red-500 transition-colors cursor-pointer"
+                                  title="Like this post"
+                                >
+                                  <Heart className={`h-4 w-4 ${bookmark.post.isLikedByCurrentUser ? 'fill-red-500 text-red-500' : ''}`} />
+                                  <span>{bookmark.post.likesCount}</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleBookmark(bookmark.post.id)
+                                  }}
+                                  className="flex items-center gap-1 hover:text-yellow-500 transition-colors cursor-pointer"
+                                  title="Bookmark this post"
+                                >
+                                  <Bookmark className={`h-4 w-4 ${bookmark.post.isBookmarkedByCurrentUser ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                                  <span>{bookmark.post.bookmarksCount}</span>
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleShare(bookmark.post.id)
+                                  }}
+                                  className="flex items-center gap-1 hover:text-blue-500 transition-colors cursor-pointer"
+                                  title="Share this post"
+                                >
+                                  <Share2 className="h-4 w-4" />
+                                  <span>Share</span>
+                                </button>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <Share2 className="h-4 w-4" />
-                                <span>{bookmark.post.sharesCount}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                 <Eye className="h-4 w-4" />
                                 <span>{bookmark.post.viewsCount}</span>
                               </div>

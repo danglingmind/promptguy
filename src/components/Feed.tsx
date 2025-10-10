@@ -188,8 +188,15 @@ const usePostsData = () => {
       }
     }
 
-    initialFetch()
-    return () => { aborted = true }
+    // Add a small delay to ensure authentication is ready
+    const timeoutId = setTimeout(() => {
+      initialFetch()
+    }, 100)
+
+    return () => { 
+      aborted = true
+      clearTimeout(timeoutId)
+    }
   }, []) // Empty dependency array - only run once on mount
 
   // Separate polling effect that respects current filters
@@ -240,7 +247,13 @@ const usePostsData = () => {
     setError('')
   }, [applySearch])
 
-  return { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch }
+  const updatePostInList = useCallback((postId: string, updates: Partial<PostResponse>) => {
+    setPosts(prev => prev.map(post => 
+      post.id === postId ? { ...post, ...updates } : post
+    ))
+  }, [])
+
+  return { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch, updatePostInList }
 }
 
 // Public feed component for non-authenticated users
@@ -253,7 +266,7 @@ function PublicFeed() {
   const { filterParams, applyFilter, applySearch } = useFilters()
   
   // Use custom hook for posts data - this isolates all filter logic
-  const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch } = usePostsData()
+  const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch, updatePostInList } = usePostsData()
 
   const handlePostClick = useCallback(async (post: PostResponse) => {
     setActivePost(post)
@@ -471,7 +484,7 @@ function AuthenticatedFeed() {
   const { filterParams, applyFilter, applySearch } = useFilters()
   
   // Use custom hook for posts data - this isolates all filter logic
-  const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch } = usePostsData()
+  const { posts, loading, hasMore, error, loadMore, applyFilter: handleApplyFilter, applySearch: handleApplySearch, updatePostInList } = usePostsData()
 
   const handlePostClick = useCallback(async (post: PostResponse) => {
     setActivePost(post)
@@ -499,14 +512,15 @@ function AuthenticatedFeed() {
       
       if (response.ok) {
         const data = await response.json()
+        const updates = {
+          likesCount: data.liked ? (posts.find(p => p.id === postId)?.likesCount || 0) + 1 : (posts.find(p => p.id === postId)?.likesCount || 0) - 1,
+          isLikedByCurrentUser: data.liked
+        }
         setActivePost(prev => prev && prev.id === postId 
-          ? { 
-              ...prev, 
-              likesCount: data.liked ? prev.likesCount + 1 : prev.likesCount - 1,
-              isLikedByCurrentUser: data.liked
-            } 
+          ? { ...prev, ...updates } 
           : prev
         )
+        updatePostInList(postId, updates)
       } else {
         const errorData = await response.json()
         if (response.status === 401) {
@@ -531,14 +545,15 @@ function AuthenticatedFeed() {
       
       if (response.ok) {
         const data = await response.json()
+        const updates = {
+          bookmarksCount: data.bookmarked ? (posts.find(p => p.id === postId)?.bookmarksCount || 0) + 1 : (posts.find(p => p.id === postId)?.bookmarksCount || 0) - 1,
+          isBookmarkedByCurrentUser: data.bookmarked
+        }
         setActivePost(prev => prev && prev.id === postId 
-          ? { 
-              ...prev, 
-              bookmarksCount: data.bookmarked ? prev.bookmarksCount + 1 : prev.bookmarksCount - 1,
-              isBookmarkedByCurrentUser: data.bookmarked
-            } 
+          ? { ...prev, ...updates } 
           : prev
         )
+        updatePostInList(postId, updates)
       } else {
         const errorData = await response.json()
         if (response.status === 401) {
