@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/db'
 import type { ViewPostResponse } from '@/types/interactions'
 import { ensureUserByClerkId } from '@/lib/auth/ensureUser'
+import { getAnonymousUserId } from '@/lib/auth/anonymousUser'
 
 export async function POST(
   _request: NextRequest,
@@ -12,10 +13,14 @@ export async function POST(
     const { userId } = await auth()
     const { id: postId } = await params
 
-    let viewerId: string | undefined
+    let viewerId: string
     if (userId) {
+      // Authenticated user - use their actual user ID
       const user = await ensureUserByClerkId(userId)
       viewerId = user.id
+    } else {
+      // Non-authenticated user - use anonymous user ID for tracking
+      viewerId = await getAnonymousUserId()
     }
 
     await prisma.$transaction([
